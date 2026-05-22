@@ -1,0 +1,105 @@
+package commands
+
+import (
+	"fmt"
+
+	"github.com/neetozone/neeto-desk-cli/internal/output"
+	"github.com/spf13/cobra"
+)
+
+var ticketCommentsCmd = &cobra.Command{
+	Use:   "comments",
+	Short: "Manage ticket comments",
+}
+
+var ticketCommentsListCmd = &cobra.Command{
+	Use:   "list <ticket-id>",
+	Short: "List comments on a ticket",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := getClient(cmd)
+		if err != nil {
+			return err
+		}
+
+		params := paginationParams(cmd)
+		path := fmt.Sprintf("/tickets/%s/comments", args[0])
+		data, err := c.Get(path, params)
+		if err != nil {
+			return err
+		}
+
+		printList(data, "comments", []output.Breadcrumb{
+			{Label: "Show", Command: fmt.Sprintf("neetodesk tickets comments show %s <comment-id>", args[0])},
+		})
+		return nil
+	},
+}
+
+var ticketCommentsShowCmd = &cobra.Command{
+	Use:   "show <ticket-id> <comment-id>",
+	Short: "Show a comment on a ticket",
+	Args:  cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := getClient(cmd)
+		if err != nil {
+			return err
+		}
+
+		path := fmt.Sprintf("/tickets/%s/comments/%s", args[0], args[1])
+		data, err := c.Get(path, nil)
+		if err != nil {
+			return err
+		}
+
+		printResource(data, nil)
+		return nil
+	},
+}
+
+var ticketCommentsCreateCmd = &cobra.Command{
+	Use:   "create <ticket-id>",
+	Short: "Add a comment to a ticket",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := getClient(cmd)
+		if err != nil {
+			return err
+		}
+
+		body := map[string]interface{}{}
+		if v, _ := cmd.Flags().GetString("content"); v != "" {
+			body["content"] = v
+		}
+		if v, _ := cmd.Flags().GetString("comment-type"); v != "" {
+			body["comment_type"] = v
+		}
+		if v, _ := cmd.Flags().GetString("author-email"); v != "" {
+			body["author_email"] = v
+		}
+
+		path := fmt.Sprintf("/tickets/%s/comments", args[0])
+		data, err := c.Post(path, body)
+		if err != nil {
+			return err
+		}
+
+		printActionResult(data, nil)
+		return nil
+	},
+}
+
+func init() {
+	addPaginationFlags(ticketCommentsListCmd)
+
+	ticketCommentsCreateCmd.Flags().String("content", "", "Comment content (HTML)")
+	ticketCommentsCreateCmd.Flags().String("comment-type", "reply", "Comment type: reply or note")
+	ticketCommentsCreateCmd.Flags().String("author-email", "", "Author email (agent or customer)")
+	_ = ticketCommentsCreateCmd.MarkFlagRequired("content")
+
+	ticketCommentsCmd.AddCommand(ticketCommentsListCmd)
+	ticketCommentsCmd.AddCommand(ticketCommentsShowCmd)
+	ticketCommentsCmd.AddCommand(ticketCommentsCreateCmd)
+
+	ticketsCmd.AddCommand(ticketCommentsCmd)
+}
