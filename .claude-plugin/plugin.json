@@ -1,0 +1,10 @@
+{
+  "name": "neetodesk",
+  "description": "NeetoDesk CLI",
+  "author": {
+    "name": "BigBinary",
+    "email": "support@bigbinary.com"
+  },
+  "homepage": "https://github.com/neetozone/neeto-desk-cli",
+  "repository": "https://github.com/neetozone/neeto-desk-cli"
+}

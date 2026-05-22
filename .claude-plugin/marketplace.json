@@ -1,0 +1,14 @@
+{
+  "name": "neetodesk",
+  "owner": {
+    "name": "BigBinary",
+    "email": "support@bigbinary.com"
+  },
+  "plugins": [
+    {
+      "name": "neetodesk",
+      "source": "./",
+      "description": "NeetoDesk CLI"
+    }
+  ]
+}

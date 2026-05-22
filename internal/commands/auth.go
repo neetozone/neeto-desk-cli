@@ -1,0 +1,132 @@
+package commands
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/neetozone/neeto-desk-cli/internal/auth"
+	"github.com/neetozone/neeto-desk-cli/internal/output"
+	"github.com/spf13/cobra"
+)
+
+var loginCmd = &cobra.Command{
+	Use:   "login",
+	Short: "Log in to NeetoDesk via browser",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		subdomain, _ := cmd.Flags().GetString("subdomain")
+
+		if subdomain == "" {
+			fmt.Print("Enter your NeetoDesk subdomain (e.g., 'acme' for acme.neetodesk.com): ")
+			reader := bufio.NewReader(os.Stdin)
+			input, _ := reader.ReadString('\n')
+			subdomain = strings.TrimSpace(input)
+		}
+
+		if subdomain == "" {
+			return fmt.Errorf("subdomain is required")
+		}
+
+		creds, err := auth.Login(subdomain)
+		if err != nil {
+			return err
+		}
+
+		output.PrintMessage(fmt.Sprintf("Logged in as %s on %s", creds.Email, hostFromBaseURL(auth.BaseURL(creds.Subdomain), creds.Subdomain)))
+		return nil
+	},
+}
+
+var logoutCmd = &cobra.Command{
+	Use:   "logout",
+	Short: "Log out and clear saved credentials",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		subdomain, _ := cmd.Flags().GetString("subdomain")
+		all, _ := cmd.Flags().GetBool("all")
+
+		store, err := auth.LoadStore()
+		if err != nil {
+			return err
+		}
+
+		if len(store.Credentials) == 0 {
+			output.PrintMessage("Not logged in.")
+			return nil
+		}
+
+		if all {
+			store.Credentials = nil
+			if err := auth.SaveStore(store); err != nil {
+				return err
+			}
+			output.PrintMessage("Logged out of all subdomains.")
+			return nil
+		}
+
+		if subdomain == "" {
+			if len(store.Credentials) > 1 {
+				return fmt.Errorf("multiple subdomains logged in (%s); specify --subdomain or --all",
+					strings.Join(store.Subdomains(), ", "))
+			}
+			subdomain = store.Credentials[0].Subdomain
+		}
+
+		if !store.Remove(subdomain) {
+			return fmt.Errorf("not logged in to %q", subdomain)
+		}
+		if err := auth.SaveStore(store); err != nil {
+			return err
+		}
+
+		output.PrintMessage(fmt.Sprintf("Logged out of %s.", hostFromBaseURL(auth.BaseURL(subdomain), subdomain)))
+		return nil
+	},
+}
+
+var whoamiCmd = &cobra.Command{
+	Use:   "whoami",
+	Short: "Show current authenticated user(s)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		subdomain, _ := cmd.Flags().GetString("subdomain")
+
+		store, err := auth.LoadStore()
+		if err != nil {
+			return err
+		}
+
+		if len(store.Credentials) == 0 {
+			return fmt.Errorf("not logged in. Run 'neetodesk login' to authenticate")
+		}
+
+		if subdomain != "" {
+			creds, ok := store.Find(subdomain)
+			if !ok {
+				return fmt.Errorf("not logged in to %q. Logged in subdomains: %s",
+					subdomain, strings.Join(store.Subdomains(), ", "))
+			}
+			output.PrintMessage(fmt.Sprintf("Logged in as %s on %s", creds.Email, hostFromBaseURL(auth.BaseURL(creds.Subdomain), creds.Subdomain)))
+			return nil
+		}
+
+		if len(store.Credentials) == 1 {
+			c := store.Credentials[0]
+			output.PrintMessage(fmt.Sprintf("Logged in as %s on %s (default)", c.Email, hostFromBaseURL(auth.BaseURL(c.Subdomain), c.Subdomain)))
+			return nil
+		}
+
+		lines := make([]string, 0, len(store.Credentials))
+		for _, c := range store.Credentials {
+			lines = append(lines, fmt.Sprintf("%s on %s", c.Email, hostFromBaseURL(auth.BaseURL(c.Subdomain), c.Subdomain)))
+		}
+		output.PrintMessage(strings.Join(lines, "\n"))
+		return nil
+	},
+}
+
+func init() {
+	logoutCmd.Flags().Bool("all", false, "Log out of every saved subdomain")
+	rootCmd.AddCommand(loginCmd)
+	rootCmd.AddCommand(logoutCmd)
+	rootCmd.AddCommand(whoamiCmd)
+}

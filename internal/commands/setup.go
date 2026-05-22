@@ -1,0 +1,217 @@
+package commands
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"github.com/neetozone/neeto-desk-cli/internal/plugin"
+	"github.com/spf13/cobra"
+)
+
+var setupCmd = &cobra.Command{
+	Use:   "setup",
+	Short: "Set up NeetoDesk for AI coding assistants",
+}
+
+// --- Claude Code ---
+
+var setupClaudeCmd = &cobra.Command{
+	Use:   "claude",
+	Short: "Register NeetoDesk plugin with Claude Code",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("could not determine home directory: %w", err)
+		}
+
+		if _, err := os.Stat(filepath.Join(home, ".claude")); os.IsNotExist(err) {
+			return fmt.Errorf("Claude Code not found (~/.claude/ does not exist)")
+		}
+
+		dest := filepath.Join(home, ".config", "neetodesk", "claude-plugin")
+		if err := os.RemoveAll(dest); err != nil {
+			return fmt.Errorf("could not clean destination: %w", err)
+		}
+
+		if err := plugin.ExtractClaudePlugin(dest); err != nil {
+			return fmt.Errorf("could not extract plugin: %w", err)
+		}
+
+		// Make hooks executable
+		hooksDir := filepath.Join(dest, "hooks")
+		entries, _ := os.ReadDir(hooksDir)
+		for _, e := range entries {
+			if strings.HasSuffix(e.Name(), ".sh") {
+				_ = os.Chmod(filepath.Join(hooksDir, e.Name()), 0o755)
+			}
+		}
+
+		fmt.Printf("NeetoDesk plugin extracted to %s\n", dest)
+		fmt.Println()
+		fmt.Println("To finish installation, open Claude Code and run these slash commands:")
+		fmt.Printf("  /plugin marketplace add %s\n", dest)
+		fmt.Printf("  /plugin install %s@%s\n", plugin.PluginName, plugin.MarketplaceName)
+		fmt.Println()
+		fmt.Println("(Claude Code installs plugins via interactive slash commands — there is no shell equivalent today.)")
+		return nil
+	},
+}
+
+// --- Cursor ---
+
+var setupCursorCmd = &cobra.Command{
+	Use:   "cursor",
+	Short: "Write NeetoDesk rules for Cursor IDE",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		target := filepath.Join(".cursor", "rules", "neetodesk.mdc")
+		return writeCreateMode(target, cursorContent())
+	},
+}
+
+func cursorContent() string {
+	var b strings.Builder
+	b.WriteString("---\n")
+	b.WriteString("description: \"NeetoDesk CLI\"\n")
+	b.WriteString("alwaysApply: true\n")
+	b.WriteString("---\n\n")
+	b.WriteString(plugin.SkillBody())
+	return b.String()
+}
+
+// --- Windsurf ---
+
+var setupWindsurfCmd = &cobra.Command{
+	Use:   "windsurf",
+	Short: "Write NeetoDesk rules for Windsurf IDE",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		target := filepath.Join(".windsurf", "rules", "neetodesk.md")
+		return writeCreateMode(target, windsurfContent())
+	},
+}
+
+func windsurfContent() string {
+	var b strings.Builder
+	b.WriteString("---\n")
+	b.WriteString("trigger: always_on\n")
+	b.WriteString("description: \"NeetoDesk CLI\"\n")
+	b.WriteString("---\n\n")
+	b.WriteString(plugin.SkillBody())
+	return b.String()
+}
+
+// --- Copilot ---
+
+var setupCopilotCmd = &cobra.Command{
+	Use:   "copilot",
+	Short: "Add NeetoDesk instructions for GitHub Copilot",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		target := filepath.Join(".github", "copilot-instructions.md")
+		return writeAppendMode(target, plugin.SkillBody())
+	},
+}
+
+// --- Gemini ---
+
+var setupGeminiCmd = &cobra.Command{
+	Use:   "gemini",
+	Short: "Add NeetoDesk instructions for Gemini CLI",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return writeAppendMode("GEMINI.md", plugin.SkillBody())
+	},
+}
+
+// --- Codex ---
+
+var setupCodexCmd = &cobra.Command{
+	Use:   "codex",
+	Short: "Add NeetoDesk instructions for OpenAI Codex",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return writeAppendMode("AGENTS.md", plugin.SkillBody())
+	},
+}
+
+// --- Helpers ---
+
+// writeCreateMode writes a file, creating parent dirs. Skips if already present.
+func writeCreateMode(target, content string) error {
+	if _, err := os.Stat(target); err == nil {
+		fmt.Printf("Already installed: %s\n", target)
+		return nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
+		return err
+	}
+
+	fmt.Printf("Wrote %s\n", target)
+	return nil
+}
+
+// writeAppendMode appends a "## NeetoDesk CLI" section to a file, or replaces
+// an existing section. Creates the file if it doesn't exist.
+func writeAppendMode(target, body string) error {
+	section := "## NeetoDesk CLI\n\n" + body
+
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return err
+	}
+
+	existing, err := os.ReadFile(target)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err := os.WriteFile(target, []byte(section), 0o644); err != nil {
+				return err
+			}
+			fmt.Printf("Wrote %s\n", target)
+			return nil
+		}
+		return err
+	}
+
+	content := string(existing)
+
+	re := regexp.MustCompile(`(?m)^## NeetoDesk CLI\n[\s\S]*?(?:\n## |\z)`)
+	if re.MatchString(content) {
+		loc := re.FindStringIndex(content)
+		matched := content[loc[0]:loc[1]]
+		if strings.HasSuffix(matched, "\n## ") {
+			replacement := section + "\n\n## "
+			content = content[:loc[0]] + replacement + content[loc[1]:]
+		} else {
+			content = content[:loc[0]] + section
+		}
+		if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
+			return err
+		}
+		fmt.Printf("Updated %s\n", target)
+		return nil
+	}
+
+	if !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+	content += "\n" + section
+
+	if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("Updated %s\n", target)
+	return nil
+}
+
+func init() {
+	rootCmd.AddCommand(setupCmd)
+	setupCmd.AddCommand(setupClaudeCmd)
+	setupCmd.AddCommand(setupCursorCmd)
+	setupCmd.AddCommand(setupWindsurfCmd)
+	setupCmd.AddCommand(setupCopilotCmd)
+	setupCmd.AddCommand(setupGeminiCmd)
+	setupCmd.AddCommand(setupCodexCmd)
+}

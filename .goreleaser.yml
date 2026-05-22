@@ -1,0 +1,53 @@
+version: 2
+
+builds:
+  - main: ./cmd/neetodesk/
+    binary: neetodesk
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/neetozone/neeto-desk-cli/internal/commands.Version={{.Version}}
+      - -X github.com/neetozone/neeto-desk-cli/internal/commands.Commit={{.ShortCommit}}
+      - -X github.com/neetozone/neeto-desk-cli/internal/commands.Date={{.Date}}
+
+archives:
+  - format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+brews:
+  - name: neetodesk
+    directory: Formula
+    repository:
+      owner: neetozone
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    url_template: "https://neeto-downloads.s3.amazonaws.com/cli/NeetoDesk/v{{ .Version }}/{{ .ArtifactName }}"
+    homepage: "https://neetodesk.com"
+    description: "NeetoDesk CLI"
+    install: |
+      bin.install "neetodesk"
+
+release:
+  name_template: "v{{ .Version }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
