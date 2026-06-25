@@ -94,6 +94,26 @@ func PrintWithPagination(data json.RawMessage, pagination json.RawMessage, bread
 	printBreadcrumbs(breadcrumbs)
 }
 
+func PrintTable(data json.RawMessage, headers []string, rows [][]interface{}, breadcrumbs []Breadcrumb) {
+	if ToonMode {
+		printToon(data)
+		return
+	}
+
+	if QuietMode {
+		fmt.Println(string(data))
+		return
+	}
+
+	if UseJSON() {
+		printEnvelope(data, breadcrumbs, nil)
+		return
+	}
+
+	renderGrid(headers, buildGrid(rows))
+	printBreadcrumbs(breadcrumbs)
+}
+
 func PrintMessage(msg string) {
 	if QuietMode {
 		fmt.Println("success")
@@ -205,7 +225,7 @@ func printTable(rows []map[string]interface{}) {
 
 	headers := make([]string, len(cols))
 	for i, col := range cols {
-		headers[i] = formatHeader(col)
+		headers[i] = FormatHeader(col)
 	}
 
 	grid := make([][]string, len(rows))
@@ -216,6 +236,10 @@ func printTable(rows []map[string]interface{}) {
 		}
 	}
 
+	renderGrid(headers, grid)
+}
+
+func renderGrid(headers []string, grid [][]string) {
 	widths := calculateWidths(headers, grid)
 	pad := strings.Repeat(" ", colPadding)
 
@@ -244,6 +268,17 @@ func printTable(rows []map[string]interface{}) {
 		}
 		fmt.Println()
 	}
+}
+
+func buildGrid(rows [][]interface{}) [][]string {
+	grid := make([][]string, len(rows))
+	for i, row := range rows {
+		grid[i] = make([]string, len(row))
+		for j, val := range row {
+			grid[i][j] = formatValue(val)
+		}
+	}
+	return grid
 }
 
 func pickColumns(sample map[string]interface{}) []string {
@@ -326,7 +361,7 @@ func printKeyValue(obj map[string]interface{}, rawData json.RawMessage) {
 		if _, ok := obj[k]; !ok {
 			continue
 		}
-		label := formatHeader(k)
+		label := FormatHeader(k)
 		if len(label) > maxLabelLen {
 			maxLabelLen = len(label)
 		}
@@ -337,7 +372,7 @@ func printKeyValue(obj map[string]interface{}, rawData json.RawMessage) {
 		if !ok {
 			continue
 		}
-		label := formatHeader(k)
+		label := FormatHeader(k)
 
 		if isScalar(v) {
 			fmt.Printf("  %-*s  %s\n", maxLabelLen, label, formatValue(v))
@@ -460,7 +495,7 @@ func isScalar(v interface{}) bool {
 	return false
 }
 
-func formatHeader(field string) string {
+func FormatHeader(field string) string {
 	return strings.ToUpper(strings.ReplaceAll(field, "_", " "))
 }
 

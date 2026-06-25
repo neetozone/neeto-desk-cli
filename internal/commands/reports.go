@@ -1,9 +1,11 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 
+	"github.com/neetozone/neeto-desk-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -83,7 +85,11 @@ var reportsTicketsCmd = &cobra.Command{
 			return err
 		}
 
-		printList(data, "ticket_statuses", nil)
+		if items, headers, rows, ok := ticketStatusReport(data); ok {
+			output.PrintTable(items, headers, rows, nil)
+		} else {
+			printList(data, "ticket_statuses", nil)
+		}
 		return nil
 	},
 }
@@ -102,9 +108,80 @@ var reportsTicketTimeSeriesCmd = &cobra.Command{
 			return err
 		}
 
-		printResource(data, nil)
+		if headers, rows, ok := ticketTimeSeriesReport(data); ok {
+			output.PrintTable(data, headers, rows, nil)
+		} else {
+			printResource(data, nil)
+		}
 		return nil
 	},
+}
+
+func ticketStatusReport(data json.RawMessage) (json.RawMessage, []string, [][]interface{}, bool) {
+	var parsed map[string]json.RawMessage
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return nil, nil, nil, false
+	}
+
+	items, ok := parsed["ticket_statuses"]
+	if !ok {
+		return nil, nil, nil, false
+	}
+
+	var statuses []map[string]interface{}
+	if err := json.Unmarshal(items, &statuses); err != nil || len(statuses) == 0 {
+		return nil, nil, nil, false
+	}
+
+	headers := []string{"NAME", "PRESENT", "PREVIOUS", "CHANGE %"}
+	rows := make([][]interface{}, len(statuses))
+	for i, status := range statuses {
+		value, _ := status["value"].(map[string]interface{})
+		rows[i] = []interface{}{
+			status["name"],
+			value["present"],
+			value["previous"],
+			value["change_percentage"],
+		}
+	}
+
+	return items, headers, rows, true
+}
+
+func ticketTimeSeriesReport(data json.RawMessage) ([]string, [][]interface{}, bool) {
+	var parsed struct {
+		Dates []interface{}            `json:"dates"`
+		Data  []map[string]interface{} `json:"data"`
+	}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return nil, nil, false
+	}
+	if len(parsed.Dates) == 0 || len(parsed.Data) == 0 {
+		return nil, nil, false
+	}
+
+	headers := []string{"DATE"}
+	for _, series := range parsed.Data {
+		name, _ := series["name"].(string)
+		headers = append(headers, output.FormatHeader(name))
+	}
+
+	rows := make([][]interface{}, len(parsed.Dates))
+	for i, date := range parsed.Dates {
+		row := make([]interface{}, 0, len(parsed.Data)+1)
+		row = append(row, date)
+		for _, series := range parsed.Data {
+			values, _ := series["values"].([]interface{})
+			if i < len(values) {
+				row = append(row, values[i])
+			} else {
+				row = append(row, nil)
+			}
+		}
+		rows[i] = row
+	}
+
+	return headers, rows, true
 }
 
 func reportParams(cmd *cobra.Command) url.Values {
