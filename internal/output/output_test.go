@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -139,6 +140,62 @@ func TestPrintWithPagination_QuietMode(t *testing.T) {
 	trimmed := strings.TrimSpace(out)
 	if trimmed != `[{"id":1}]` {
 		t.Errorf("quiet output = %q, want raw data without pagination", trimmed)
+	}
+}
+
+func TestBuildGrid(t *testing.T) {
+	rows := [][]interface{}{
+		{"closed", float64(8), nil},
+		{"open", float64(3), float64(2)},
+	}
+
+	got := buildGrid(rows)
+	want := [][]string{
+		{"closed", "8", "-"},
+		{"open", "3", "2"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("buildGrid() = %#v, want %#v", got, want)
+	}
+}
+
+func TestRenderGrid(t *testing.T) {
+	out := captureStdout(t, func() {
+		renderGrid([]string{"NAME", "PRESENT"}, [][]string{{"closed", "8"}})
+	})
+
+	for _, want := range []string{"NAME", "PRESENT", "closed", "8", "─"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("renderGrid() output %q missing %q", out, want)
+		}
+	}
+}
+
+func TestPrintTable_JSONPreservesRaw(t *testing.T) {
+	ForceJSON = true
+	QuietMode = false
+	defer func() { ForceJSON = false }()
+
+	raw := json.RawMessage(`[{"name":"closed","value":{"present":8,"previous":null}}]`)
+
+	out := captureStdout(t, func() {
+		PrintTable(raw, []string{"NAME", "PRESENT"}, [][]interface{}{{"closed", float64(8)}}, nil)
+	})
+
+	var env Envelope
+	if err := json.Unmarshal([]byte(strings.TrimSpace(out)), &env); err != nil {
+		t.Fatalf("output is not valid JSON envelope: %v", err)
+	}
+
+	var got, want interface{}
+	if err := json.Unmarshal(env.Data, &got); err != nil {
+		t.Fatalf("envelope data invalid: %v", err)
+	}
+	if err := json.Unmarshal(raw, &want); err != nil {
+		t.Fatalf("raw invalid: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("PrintTable() JSON data = %v, want raw payload %v", got, want)
 	}
 }
 
