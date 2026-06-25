@@ -116,6 +116,25 @@ func TestTicketTimeSeriesReport_ShortSeries(t *testing.T) {
 	}
 }
 
+func TestTicketTimeSeriesReport_LongSeries(t *testing.T) {
+	data := json.RawMessage(`{"dates":["d1","d2"],"data":[{"name":"new","values":[1,2,3,4]}]}`)
+
+	headers, rows, ok := ticketTimeSeriesReport(data)
+	if !ok {
+		t.Fatal("ticketTimeSeriesReport() ok = false, want true")
+	}
+	if !reflect.DeepEqual(headers, []string{"DATE", "NEW"}) {
+		t.Errorf("headers = %v", headers)
+	}
+	wantRows := [][]interface{}{
+		{"d1", float64(1)},
+		{"d2", float64(2)},
+	}
+	if !reflect.DeepEqual(rows, wantRows) {
+		t.Errorf("rows = %#v, want %#v (values beyond the date count are dropped)", rows, wantRows)
+	}
+}
+
 func TestTicketTimeSeriesReport_MissingKeys(t *testing.T) {
 	if _, _, ok := ticketTimeSeriesReport(json.RawMessage(`{"foo":1}`)); ok {
 		t.Error("ticketTimeSeriesReport() ok = true, want false when dates/data absent")
