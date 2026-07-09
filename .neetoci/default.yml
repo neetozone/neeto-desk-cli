@@ -6,9 +6,9 @@ plan: pro
 
 paths:
   - "**/*.go"
-  - go.mod
-  - go.sum
-  - .neetoci/default.yml
+  - "**/go.mod"
+  - "**/go.sum"
+  - .neetoci/**
 
 machine_type: multi
 
