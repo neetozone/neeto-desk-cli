@@ -52,7 +52,8 @@ cd neeto-desk-cli
 bin/setup
 ```
 
-This installs Go dependencies, golangci-lint, configures git hooks, and builds the binary.
+This installs Go dependencies, golangci-lint, configures git hooks, and builds
+the binary.
 
 ### Make targets
 
@@ -69,7 +70,8 @@ make clean          # Remove built binary
 
 ### Pointing to a local or staging server
 
-Set `NEETODESK_BASE_URL` to override the default `https://<subdomain>.neetodesk.com`:
+Set `NEETODESK_BASE_URL` to override the default
+`https://<subdomain>.neetodesk.com`:
 
 ```bash
 export NEETODESK_BASE_URL=http://acme.lvh.me:8980
@@ -93,15 +95,15 @@ See [`docs/adding-commands.md`](docs/adding-commands.md) for the step-by-step
 workflow for adding new resource commands that use the built-in auth, HTTP
 client, and output helpers.
 
-Quick API wrapper reference: [`docs/api-wrapper-reference.md`](docs/api-wrapper-reference.md).
+Quick API wrapper reference:
+[`docs/api-wrapper-reference.md`](docs/api-wrapper-reference.md).
 
 ## Release
 
-Releases are cut by BigBinary's CI pipeline defined in
-`.neetoci/release.yml`. Merging a PR with a `major` / `minor` / `patch`
-label to `main` triggers `.scripts/release.sh`, which tags the current
-VERSION, runs GoReleaser, uploads artifacts to
-`s3://neeto-downloads/cli/NeetoDesk/`, updates the Homebrew tap
+Releases are cut by BigBinary's CI pipeline defined in `.neetoci/release.yml`.
+Merging a PR with a `major` / `minor` / `patch` label to `main` triggers
+`.scripts/release.sh`, which tags the current VERSION, runs GoReleaser, uploads
+artifacts to `s3://neeto-downloads/cli/NeetoDesk/`, updates the Homebrew tap
 (`neetozone/homebrew-tap`), and opens the next-version bump PR.
 
 ## AI coding assistants
