@@ -28,4 +28,7 @@ var versionCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
+
+	rootCmd.Version = Version
+	rootCmd.SetVersionTemplate(fmt.Sprintf("neetodesk %s (commit: %s, built: %s)\n", Version, Commit, Date))
 }
