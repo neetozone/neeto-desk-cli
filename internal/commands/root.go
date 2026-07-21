@@ -16,9 +16,12 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:           "neetodesk",
-	Short:         "NeetoDesk CLI",
-	Long:          "A command-line interface for NeetoDesk.",
+	Use:   "neetodesk",
+	Short: "NeetoDesk CLI",
+	Long:  "A command-line interface for NeetoDesk.",
+	Example: "  $ neetodesk tickets list\n" +
+		"  $ neetodesk tickets show <id>\n" +
+		"  $ neetodesk reports agents",
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
