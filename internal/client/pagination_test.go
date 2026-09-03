@@ -42,6 +42,9 @@ func TestAddPaginationParams_PageSizeOnly(t *testing.T) {
 	if got := params.Get("page"); got != "" {
 		t.Errorf("page = %q, want empty", got)
 	}
+	if got := params.Get("page_number"); got != "" {
+		t.Errorf("page_number = %q, want empty", got)
+	}
 	if got := params.Get("page_size"); got != "50" {
 		t.Errorf("page_size = %q, want 50", got)
 	}
