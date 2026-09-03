@@ -116,7 +116,7 @@ neetodesk setup codex       # Add a NeetoDesk section to AGENTS.md
 ```
 
 Every command except `setup claude` writes into the current project directory, so
-run it from the root of the project the assistant works in. `setup copilot`,
-`setup gemini` and `setup codex` keep the existing content of their file and,
-when re-run after an upgrade, replace the NeetoDesk section instead of
-adding a duplicate.
+run these commands from the root of the project the assistant works in.
+`setup copilot`, `setup gemini` and `setup codex` keep the existing content of
+their file and, when re-run after an upgrade, replace the NeetoDesk section instead
+of adding a duplicate.
