@@ -74,9 +74,6 @@ var ticketCommentsCreateCmd = &cobra.Command{
 		if v, _ := cmd.Flags().GetString("comment-type"); v != "" {
 			body["comment_type"] = v
 		}
-		if v, _ := cmd.Flags().GetString("author-email"); v != "" {
-			body["author_email"] = v
-		}
 
 		path := fmt.Sprintf("/tickets/%s/comments", args[0])
 		data, err := c.Post(path, body)
@@ -94,7 +91,6 @@ func init() {
 
 	ticketCommentsCreateCmd.Flags().String("content", "", "Comment content (HTML)")
 	ticketCommentsCreateCmd.Flags().String("comment-type", "reply", "Comment type: reply or note")
-	ticketCommentsCreateCmd.Flags().String("author-email", "", "Author email (agent or customer)")
 	_ = ticketCommentsCreateCmd.MarkFlagRequired("content")
 
 	ticketCommentsCmd.AddCommand(ticketCommentsListCmd)
