@@ -13,7 +13,7 @@ auth.Login(subdomain string) (*auth.Credentials, error)
 //   - subdomain != ""   : the matching entry (error if missing).
 //   - subdomain == ""   : the one entry if exactly one is logged in.
 //   - subdomain == "" + >1 logged in : error asking for --subdomain.
-//   - empty store       : "not logged in" error.
+//   - empty store       : "Not authenticated" error.
 auth.SelectCredentials(subdomain string) (*auth.Credentials, error)
 
 // Store manipulation (rarely needed by command code).
