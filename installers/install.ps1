@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $BaseUrl = "https://neeto-downloads.s3.amazonaws.com/cli/NeetoDesk/latest"
-$InstallDir = "$env:LOCALAPPDATA\Programs\neetodesk"
+$InstallDir = if ($env:NEETODESK_INSTALL_DIR) { $env:NEETODESK_INSTALL_DIR } else { "$env:LOCALAPPDATA\Programs\neetodesk" }
 
 $Arch = if ([Environment]::Is64BitOperatingSystem) {
   if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "amd64" }
@@ -13,25 +13,46 @@ $Arch = if ([Environment]::Is64BitOperatingSystem) {
 $Archive = "neetodesk_windows_${Arch}.zip"
 $Url = "${BaseUrl}/${Archive}"
 
-Write-Host "Downloading NeetoDesk CLI for windows/${Arch}..."
 $TmpDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
-$ZipPath = Join-Path $TmpDir $Archive
 
-Invoke-WebRequest -Uri $Url -OutFile $ZipPath
+try {
+  $ZipPath = Join-Path $TmpDir $Archive
 
-Write-Host "Extracting..."
-Expand-Archive -Path $ZipPath -DestinationPath $TmpDir -Force
+  Write-Host "Downloading NeetoDesk CLI for windows/${Arch}..."
+  Invoke-WebRequest -Uri $Url -OutFile $ZipPath
 
-Write-Host "Installing to ${InstallDir}..."
-New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-Copy-Item (Join-Path $TmpDir "neetodesk.exe") -Destination (Join-Path $InstallDir "neetodesk.exe") -Force
+  Write-Host "Verifying checksum..."
+  $SumsPath = Join-Path $TmpDir "SHA256SUMS"
+  Invoke-WebRequest -Uri "${BaseUrl}/SHA256SUMS" -OutFile $SumsPath
 
-$UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if ($UserPath -notlike "*$InstallDir*") {
-  [Environment]::SetEnvironmentVariable("Path", "$UserPath;$InstallDir", "User")
-  Write-Host "Added ${InstallDir} to user PATH."
+  $Expected = $null
+  foreach ($Line in Get-Content $SumsPath) {
+    $Parts = $Line.Trim() -split "\s+", 2
+    if ($Parts.Count -eq 2 -and $Parts[1].TrimStart("*") -eq $Archive) { $Expected = $Parts[0] }
+  }
+  if (-not $Expected) {
+    throw "No published checksum for ${Archive}. Aborting."
+  }
+
+  $Actual = (Get-FileHash -Path $ZipPath -Algorithm SHA256).Hash
+  if ($Expected -ne $Actual) {
+    throw "Checksum mismatch for ${Archive}. Aborting.`n  expected: ${Expected}`n  actual:   ${Actual}"
+  }
+
+  Write-Host "Extracting..."
+  Expand-Archive -Path $ZipPath -DestinationPath $TmpDir -Force
+
+  Write-Host "Installing to ${InstallDir}..."
+  New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+  Copy-Item (Join-Path $TmpDir "neetodesk.exe") -Destination (Join-Path $InstallDir "neetodesk.exe") -Force
+
+  $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  if ($UserPath -notlike "*$InstallDir*") {
+    [Environment]::SetEnvironmentVariable("Path", "$UserPath;$InstallDir", "User")
+    Write-Host "Added ${InstallDir} to user PATH."
+  }
+} finally {
+  Remove-Item -Recurse -Force $TmpDir -ErrorAction SilentlyContinue
 }
-
-Remove-Item -Recurse -Force $TmpDir
 
 Write-Host "NeetoDesk CLI installed successfully. Restart your terminal and run 'neetodesk --help' to get started."
