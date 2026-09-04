@@ -26,7 +26,7 @@ var doctorCmd = &cobra.Command{
 
 		// API connectivity: use the credentialed subdomain if available; otherwise
 		// fall back to the explicit --subdomain flag so doctor still works when
-		// not logged in.
+		// not authenticated.
 		probeSubdomain := subdomain
 		if creds != nil {
 			probeSubdomain = creds.Subdomain
