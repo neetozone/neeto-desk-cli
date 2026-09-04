@@ -94,12 +94,20 @@ S3_HTTPS_BASE="https://neeto-downloads.s3.amazonaws.com/cli/NeetoDesk"
 
 echo "Uploading to S3 versioned directory..."
 aws s3 cp dist/ "${S3_BASE}/v${VERSION}/" --recursive --exclude "*" --include "*.tar.gz" --include "*.zip" --include "checksums.txt"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_linux_amd64.tar.gz" "${S3_BASE}/v${VERSION}/neetodesk_linux_amd64.tar.gz"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_linux_arm64.tar.gz" "${S3_BASE}/v${VERSION}/neetodesk_linux_arm64.tar.gz"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_darwin_amd64.tar.gz" "${S3_BASE}/v${VERSION}/neetodesk_macos_amd64.tar.gz"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_darwin_arm64.tar.gz" "${S3_BASE}/v${VERSION}/neetodesk_macos_arm64.tar.gz"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_windows_amd64.zip" "${S3_BASE}/v${VERSION}/neetodesk_windows_amd64.zip"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_windows_arm64.zip" "${S3_BASE}/v${VERSION}/neetodesk_windows_arm64.zip"
+
+echo "Preparing installer archives and SHA256SUMS..."
+rm -rf dist/installer-archives
+mkdir -p dist/installer-archives
+cp "dist/neeto-desk-cli_${VERSION}_linux_amd64.tar.gz" dist/installer-archives/neetodesk_linux_amd64.tar.gz
+cp "dist/neeto-desk-cli_${VERSION}_linux_arm64.tar.gz" dist/installer-archives/neetodesk_linux_arm64.tar.gz
+cp "dist/neeto-desk-cli_${VERSION}_darwin_amd64.tar.gz" dist/installer-archives/neetodesk_macos_amd64.tar.gz
+cp "dist/neeto-desk-cli_${VERSION}_darwin_arm64.tar.gz" dist/installer-archives/neetodesk_macos_arm64.tar.gz
+cp "dist/neeto-desk-cli_${VERSION}_windows_amd64.zip" dist/installer-archives/neetodesk_windows_amd64.zip
+cp "dist/neeto-desk-cli_${VERSION}_windows_arm64.zip" dist/installer-archives/neetodesk_windows_arm64.zip
+(cd dist/installer-archives && sha256sum neetodesk_* > SHA256SUMS)
+cat dist/installer-archives/SHA256SUMS
+
+aws s3 cp dist/installer-archives/ "${S3_BASE}/v${VERSION}/" --recursive
 
 echo "Generating versioned installer scripts..."
 VERSIONED_URL="${S3_HTTPS_BASE}/v${VERSION}"
@@ -116,12 +124,7 @@ aws s3 cp dist/installers/install.cmd "${S3_BASE}/v${VERSION}/install.cmd" --con
 
 echo "Uploading to S3 latest directory..."
 aws s3 rm "${S3_BASE}/latest/" --recursive
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_linux_amd64.tar.gz" "${S3_BASE}/latest/neetodesk_linux_amd64.tar.gz"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_linux_arm64.tar.gz" "${S3_BASE}/latest/neetodesk_linux_arm64.tar.gz"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_darwin_amd64.tar.gz" "${S3_BASE}/latest/neetodesk_macos_amd64.tar.gz"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_darwin_arm64.tar.gz" "${S3_BASE}/latest/neetodesk_macos_arm64.tar.gz"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_windows_amd64.zip" "${S3_BASE}/latest/neetodesk_windows_amd64.zip"
-aws s3 cp "dist/neeto-desk-cli_${VERSION}_windows_arm64.zip" "${S3_BASE}/latest/neetodesk_windows_arm64.zip"
+aws s3 cp dist/installer-archives/ "${S3_BASE}/latest/" --recursive
 aws s3 cp dist/checksums.txt "${S3_BASE}/latest/checksums.txt"
 aws s3 cp installers/install.sh "${S3_BASE}/latest/install.sh" --content-type "text/plain"
 aws s3 cp installers/install.ps1 "${S3_BASE}/latest/install.ps1" --content-type "text/plain"
