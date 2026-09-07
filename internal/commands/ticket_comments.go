@@ -12,6 +12,15 @@ var ticketCommentsCmd = &cobra.Command{
 	Short: "Manage ticket comments",
 }
 
+var validCommentTypes = map[string]bool{"reply": true, "note": true}
+
+func validateCommentType(v string) error {
+	if v == "" || validCommentTypes[v] {
+		return nil
+	}
+	return fmt.Errorf("invalid comment-type %q: must be one of reply, note", v)
+}
+
 var ticketCommentsListCmd = &cobra.Command{
 	Use:   "list <ticket-id>",
 	Short: "List comments on a ticket",
@@ -72,6 +81,9 @@ var ticketCommentsCreateCmd = &cobra.Command{
 			body["content"] = v
 		}
 		if v, _ := cmd.Flags().GetString("comment-type"); v != "" {
+			if err := validateCommentType(v); err != nil {
+				return err
+			}
 			body["comment_type"] = v
 		}
 

@@ -26,6 +26,9 @@ var ticketDraftsCreateCmd = &cobra.Command{
 			body["content"] = v
 		}
 		if v, _ := cmd.Flags().GetString("comment-type"); v != "" {
+			if err := validateCommentType(v); err != nil {
+				return err
+			}
 			body["comment_type"] = v
 		}
 		if v, _ := cmd.Flags().GetString("author-email"); v != "" {
