@@ -186,7 +186,9 @@ func ticketTimeSeriesReport(data json.RawMessage) ([]string, [][]interface{}, bo
 func reportParams(cmd *cobra.Command) url.Values {
 	params := dateRangeParams(cmd)
 	for key, values := range paginationParams(cmd) {
-		params[key] = values
+		for _, value := range values {
+			params.Add(key, value)
+		}
 	}
 	return params
 }
