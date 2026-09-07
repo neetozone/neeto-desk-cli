@@ -2,10 +2,9 @@ package commands
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
 
-	"github.com/neetozone/neeto-desk-cli/internal/output"
+	"github.com/neetozone/neeto-cli-commons/output"
 	"github.com/spf13/cobra"
 )
 
@@ -86,7 +85,7 @@ var reportsTicketsCmd = &cobra.Command{
 		}
 
 		if items, headers, rows, ok := ticketStatusReport(data); ok {
-			output.PrintTable(items, headers, rows, nil)
+			app.Printer.PrintTable(items, headers, rows, nil)
 		} else {
 			printList(data, "ticket_statuses", nil)
 		}
@@ -109,7 +108,7 @@ var reportsTicketTimeSeriesCmd = &cobra.Command{
 		}
 
 		if headers, rows, ok := ticketTimeSeriesReport(data); ok {
-			output.PrintTable(data, headers, rows, nil)
+			app.Printer.PrintTable(data, headers, rows, nil)
 		} else {
 			printResource(data, nil)
 		}
@@ -186,13 +185,10 @@ func ticketTimeSeriesReport(data json.RawMessage) ([]string, [][]interface{}, bo
 
 func reportParams(cmd *cobra.Command) url.Values {
 	params := dateRangeParams(cmd)
-	page, _ := cmd.Flags().GetInt("page")
-	pageSize, _ := cmd.Flags().GetInt("page-size")
-	if page > 0 {
-		params.Set("page", fmt.Sprintf("%d", page))
-	}
-	if pageSize > 0 {
-		params.Set("page_size", fmt.Sprintf("%d", pageSize))
+	for key, values := range paginationParams(cmd) {
+		for _, value := range values {
+			params.Add(key, value)
+		}
 	}
 	return params
 }
@@ -208,10 +204,8 @@ func init() {
 		addDateRangeFlags(cmd)
 	}
 
-	reportsAgentsCmd.Flags().Int("page", 0, "Page number")
-	reportsAgentsCmd.Flags().Int("page-size", 0, "Items per page")
-	reportsGroupsCmd.Flags().Int("page", 0, "Page number")
-	reportsGroupsCmd.Flags().Int("page-size", 0, "Items per page")
+	addPaginationFlags(reportsAgentsCmd)
+	addPaginationFlags(reportsGroupsCmd)
 
 	reportsCmd.AddCommand(reportsAgentsCmd)
 	reportsCmd.AddCommand(reportsGroupsCmd)
@@ -219,5 +213,5 @@ func init() {
 	reportsCmd.AddCommand(reportsTicketsCmd)
 	reportsCmd.AddCommand(reportsTicketTimeSeriesCmd)
 
-	rootCmd.AddCommand(reportsCmd)
+	register(func(root *cobra.Command) { root.AddCommand(reportsCmd) })
 }

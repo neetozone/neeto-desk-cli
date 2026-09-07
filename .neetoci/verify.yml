@@ -9,13 +9,30 @@ paths:
   - "**/go.mod"
   - "**/go.sum"
   - .neetoci/**
+  - .neeto-cli.yml
+  - .goreleaser.yml
+  - .gitignore
+  - .golangci.yml
+  - .githooks/**
+  - .claude-plugin/**
+  - docs/**
+  - hooks/**
+  - bin/**
+  - commands/**
+  - installers/**
+  - mise.toml
+  - Makefile
+  - README.md
 
 machine_type: multi
 
 commands:
   - checkout
   - neetoci-version go 1.26
+  - export GOPRIVATE=github.com/neetozone/*
+  - git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
   - go mod download
+  - go run github.com/neetozone/neeto-cli-commons/cmd/neeto-cli-sync --check
   - gofmt -l . | tee /tmp/fmt_output && test ! -s /tmp/fmt_output
   - go vet ./...
   - go test ./...

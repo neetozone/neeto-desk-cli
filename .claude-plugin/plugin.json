@@ -1,6 +1,6 @@
 {
   "name": "neetodesk",
-  "description": "NeetoDesk CLI",
+  "description": "manage tickets, customers and reports from the terminal",
   "author": {
     "name": "BigBinary",
     "email": "support@bigbinary.com"

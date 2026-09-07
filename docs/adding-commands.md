@@ -1,25 +1,31 @@
-# Adding product-specific commands
+# Adding a command
 
-This CLI ships with the generic infrastructure — login/logout/whoami,
-version, doctor, setup, a commands catalog, `--json`/`--quiet`/`--toon`
-output, and a full HTTP client. All you need to add is the resource
-commands specific to NeetoDesk.
+Everything generic — authentication, the HTTP client, table and JSON rendering, `doctor`,
+`completion`, `setup`, `update`, `version` and `commands` — comes from
+`github.com/neetozone/neeto-cli-commons`. This repo holds only NeetoDesk's own commands.
 
-## 1. Create a command file
+This file is generated. Edit it in neeto-cli-commons, not here.
 
-Create a new file in `internal/commands/`, e.g. `widgets.go`:
+## Where things live
+
+| Path | Contents |
+|---|---|
+| `.neeto-cli.yml` | This product's identity: names, API base path, table column priority. |
+| `product.go` | Embeds `.neeto-cli.yml` and the skill so the binary carries both. |
+| `cmd/neetodesk/main.go` | Builds the app and hands it this repo's commands. |
+| `internal/commands/register.go` | Thin wrappers over the shared app. |
+| `internal/commands/*.go` | One file per resource. This is where you work. |
+| `skills/neetodesk/SKILL.md` | What an AI assistant is told this CLI can do. |
+
+Every other file in the repo is written by `neeto-cli-sync` and asserted in CI. Editing one by
+hand fails the build.
+
+## Write the command
+
+Copy the nearest existing resource file and change the parts that differ. A file registers itself,
+so nothing else needs editing:
 
 ```go
-package commands
-
-import (
-	"encoding/json"
-	"fmt"
-
-	"github.com/neetozone/neeto-desk-cli/internal/output"
-	"github.com/spf13/cobra"
-)
-
 var widgetsCmd = &cobra.Command{
 	Use:   "widgets",
 	Short: "Manage widgets",
@@ -39,118 +45,70 @@ var widgetsListCmd = &cobra.Command{
 			return err
 		}
 
-		printList(data, "widgets", []output.Breadcrumb{
-			{Label: "Show", Command: "neetodesk widgets show <sid>"},
-		})
+		printList(data, "widgets", nil)
 		return nil
 	},
 }
-
-var widgetsShowCmd = &cobra.Command{
-	Use:   "show <sid>",
-	Short: "Show a widget",
-	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := getClient(cmd)
-		if err != nil {
-			return err
-		}
-
-		data, err := c.Get(fmt.Sprintf("/widgets/%s", args[0]), nil)
-		if err != nil {
-			return err
-		}
-
-		printResource(data, nil)
-		return nil
-	},
-}
-
-var widgetsCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create a widget",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := getClient(cmd)
-		if err != nil {
-			return err
-		}
-
-		name, _ := cmd.Flags().GetString("name")
-		body := map[string]interface{}{"name": name}
-
-		data, err := c.Post("/widgets", body)
-		if err != nil {
-			return err
-		}
-
-		printActionResult(data, nil)
-		return nil
-	},
-}
-
-var widgetsDeleteCmd = &cobra.Command{
-	Use:   "delete <sid>",
-	Short: "Delete a widget",
-	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := getClient(cmd)
-		if err != nil {
-			return err
-		}
-
-		if err := c.Delete(fmt.Sprintf("/widgets/%s", args[0])); err != nil {
-			return err
-		}
-
-		output.PrintMessage("Widget deleted.")
-		return nil
-	},
-}
-
-var _ = json.RawMessage{} // placeholder; remove if you import json elsewhere
 
 func init() {
-	addPaginationFlags(widgetsListCmd)
-
-	widgetsCreateCmd.Flags().String("name", "", "Widget name")
-	_ = widgetsCreateCmd.MarkFlagRequired("name")
+	register(func(root *cobra.Command) { root.AddCommand(widgetsCmd) })
 
 	widgetsCmd.AddCommand(widgetsListCmd)
-	widgetsCmd.AddCommand(widgetsShowCmd)
-	widgetsCmd.AddCommand(widgetsCreateCmd)
-	widgetsCmd.AddCommand(widgetsDeleteCmd)
-	rootCmd.AddCommand(widgetsCmd)
+	addPaginationFlags(widgetsListCmd)
 }
 ```
 
-## 2. Rebuild
+`register` collects the closure; `Register` replays them all onto the shared root command once
+`main` has built the app.
+
+## House conventions
+
+These are what keep the eleven neeto CLIs looking like one product. Follow them.
+
+- A list command is `list`, a single record is `show`, never `get`.
+- `Short` reads `List widgets`, not `List all widgets`, and is written for a customer — it becomes
+  the description published on the docs site.
+- A confirmation reads `Widget deleted.`, never `Widget deleted successfully.`
+- Never call `fmt.Print` in a command. Use `printList`, `printResource`, `printActionResult` or
+  `printMessage`, or `--json`, `--quiet` and `--toon` will not work.
+- Mark a required flag with `markFlagsRequired`. Do not write `(required)` into the flag's
+  description — it is added when help is rendered and left out of the machine-readable catalog.
+- A flag that reads a payload from a file is `--json-file`.
+- Split a comma-separated flag with `splitCSV`, never `strings.Split` — it trims the spaces a
+  user naturally types after each comma.
+- `register.go` should carry only the wrappers this repo actually calls.
+
+## Testing a command
+
+`getClient`, `printList`, `printResource`, `printActionResult` and `printMessage` all read a
+package-level app that `main` sets up, so a test calling one of them directly panics unless the
+package is bootstrapped first. Do that once per package, in `internal/commands/main_test.go`:
+
+```go
+func TestMain(m *testing.M) {
+	cfg, err := config.Parse(product.ConfigYAML)
+	if err != nil {
+		panic(err)
+	}
+	Register(cli.New(*cfg))
+	os.Exit(m.Run())
+}
+```
+
+`paginationParams` and `addPaginationFlags` need no bootstrap.
+
+## Before you push
 
 ```bash
 make build
-./neetodesk widgets list --help
-```
-
-## 3. Pattern reminders
-
-- **Always use `getClient(cmd)`** — it resolves the `--subdomain` flag and
-  loads credentials for you.
-- **Always use `printList` / `printResource` / `printActionResult`** so
-  every new command respects `--json`, `--quiet`, and `--toon`.
-- **Create flags with `MarkFlagRequired`** for required params. `commands`
-  catalog will report them correctly.
-- **Breadcrumbs** (`output.Breadcrumb`) steer agents to the next useful
-  command; include them on `list`/`show` results.
-
-## 4. Running against a local server
-
-```bash
-export NEETODESK_BASE_URL=http://acme.lvh.me:8980
-./neetodesk login --subdomain acme
 ./neetodesk widgets list
+./neetodesk widgets list --json
+./neetodesk widgets list --quiet
+gofmt -l . && go vet ./... && go test ./...
 ```
 
-## 5. Testing
+`neetodesk commands` prints the full command surface as JSON. The docs site is generated
+from it, so check your new command appears there and reads well.
 
-Add unit tests next to your command file, or integration tests under
-`internal/commands/` using `httptest.NewServer` as shown in
-`internal/client/client_test.go`.
+Update `skills/neetodesk/SKILL.md` in the same change. An assistant reads that file to
+decide what NeetoDesk can do, and a stale one makes it answer wrongly.

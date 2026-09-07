@@ -3,13 +3,22 @@ package commands
 import (
 	"fmt"
 
-	"github.com/neetozone/neeto-desk-cli/internal/output"
+	"github.com/neetozone/neeto-cli-commons/output"
 	"github.com/spf13/cobra"
 )
 
 var ticketCommentsCmd = &cobra.Command{
 	Use:   "comments",
 	Short: "Manage ticket comments",
+}
+
+var validCommentTypes = map[string]bool{"reply": true, "note": true}
+
+func validateCommentType(v string) error {
+	if v == "" || validCommentTypes[v] {
+		return nil
+	}
+	return fmt.Errorf("invalid comment-type %q: must be one of reply, note", v)
 }
 
 var ticketCommentsListCmd = &cobra.Command{
@@ -72,6 +81,9 @@ var ticketCommentsCreateCmd = &cobra.Command{
 			body["content"] = v
 		}
 		if v, _ := cmd.Flags().GetString("comment-type"); v != "" {
+			if err := validateCommentType(v); err != nil {
+				return err
+			}
 			body["comment_type"] = v
 		}
 

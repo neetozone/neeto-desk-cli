@@ -14,9 +14,9 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/neetozone/neeto-desk-cli/internal/commands.Version={{.Version}}
-      - -X github.com/neetozone/neeto-desk-cli/internal/commands.Commit={{.ShortCommit}}
-      - -X github.com/neetozone/neeto-desk-cli/internal/commands.Date={{.Date}}
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.Date}}
 
 archives:
   - format: tar.gz
@@ -24,6 +24,11 @@ archives:
       - goos: windows
         format: zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+blobs:
+  - provider: s3
+    bucket: "neeto-downloads"
+    directory: "cli/NeetoDesk/v{{ .Version }}"
 
 brews:
   - name: neetodesk
@@ -35,7 +40,7 @@ brews:
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     url_template: "https://downloads.neeto.com/cli/NeetoDesk/v{{ .Version }}/{{ .ArtifactName }}"
     homepage: "https://neetodesk.com"
-    description: "NeetoDesk CLI"
+    description: "NeetoDesk CLI — manage tickets, customers and reports from the terminal"
     install: |
       bin.install "neetodesk"
 

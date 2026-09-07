@@ -8,7 +8,7 @@
     {
       "name": "neetodesk",
       "source": "./",
-      "description": "NeetoDesk CLI"
+      "description": "manage tickets, customers and reports from the terminal"
     }
   ]
 }

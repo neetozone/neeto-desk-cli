@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/neetozone/neeto-desk-cli/internal/output"
+	"github.com/neetozone/neeto-cli-commons/output"
 	"github.com/spf13/cobra"
 )
 
@@ -194,7 +194,7 @@ func init() {
 	ticketsCmd.AddCommand(ticketsCreateCmd)
 	ticketsCmd.AddCommand(ticketsUpdateCmd)
 
-	rootCmd.AddCommand(ticketsCmd)
+	register(func(root *cobra.Command) { root.AddCommand(ticketsCmd) })
 }
 
 func addDateRangeFlags(cmd *cobra.Command) {

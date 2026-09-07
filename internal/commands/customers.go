@@ -71,5 +71,5 @@ func init() {
 	_ = customersCreateCmd.MarkFlagRequired("email")
 
 	customersCmd.AddCommand(customersCreateCmd)
-	rootCmd.AddCommand(customersCmd)
+	register(func(root *cobra.Command) { root.AddCommand(customersCmd) })
 }
