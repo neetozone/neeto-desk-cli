@@ -14,6 +14,6 @@ require (
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/neetozone/neeto-cli-commons v0.0.0-20260907084617-4f3a9552b98b
+	github.com/neetozone/neeto-cli-commons v0.0.0-20260907090319-e74b87675791
 	golang.org/x/sys v0.42.0 // indirect
 )
