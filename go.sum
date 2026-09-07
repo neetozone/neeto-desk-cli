@@ -3,8 +3,8 @@ github.com/alpkeskin/gotoon v0.1.1/go.mod h1:XRTz8RM4tz8M2nB37MNRN8rHF4YgeYd8nIX
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
-github.com/neetozone/neeto-cli-commons v0.0.0-20260907091958-fe5e857afc15 h1:YMd85/x0PxhoTeN8dsx4Xp3OcMpOQU1DbdiFf8qAZEo=
-github.com/neetozone/neeto-cli-commons v0.0.0-20260907091958-fe5e857afc15/go.mod h1:iqZmz6wVZf4IrvXMECUzFO/ljFMdyOxJ6yZ2VMyhZiw=
+github.com/neetozone/neeto-cli-commons v0.0.0-20260907092318-a30108eaded6 h1:DaPfnIG2I4rFxvN72ncyzIuUyw1T4xV5eW+e9H6Fd8E=
+github.com/neetozone/neeto-cli-commons v0.0.0-20260907092318-a30108eaded6/go.mod h1:iqZmz6wVZf4IrvXMECUzFO/ljFMdyOxJ6yZ2VMyhZiw=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c/go.mod h1:7rwL4CYBLnjLxUqIJNnCWiEdr3bn6IUYi15bNlnbCCU=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
