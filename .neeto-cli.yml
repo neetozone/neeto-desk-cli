@@ -8,4 +8,4 @@ root_examples:
   - neetodesk tickets show <id>
   - neetodesk reports agents
 priority_fields: [number, subject, name, title, email, status, priority, category, channel, agent_name, group_name, kind, type, organization_role, created_at]
-commons_version: v1.0.0
+commons_version: v1.0.1
