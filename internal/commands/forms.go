@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/neetozone/neeto-desk-cli/internal/output"
+	"github.com/neetozone/neeto-cli-commons/output"
 	"github.com/spf13/cobra"
 )
 
@@ -33,5 +33,5 @@ var formsListCmd = &cobra.Command{
 
 func init() {
 	formsCmd.AddCommand(formsListCmd)
-	rootCmd.AddCommand(formsCmd)
+	register(func(root *cobra.Command) { root.AddCommand(formsCmd) })
 }

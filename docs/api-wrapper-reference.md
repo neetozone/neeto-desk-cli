@@ -1,77 +1,69 @@
-# API wrapper reference
+# Shared API reference
 
-## `internal/auth`
+The helpers a command in this repo can call. They come from
+`github.com/neetozone/neeto-cli-commons` and behave identically in all eleven neeto CLIs.
 
-```go
-// BaseURL returns the host for a subdomain. Honors the *_BASE_URL env var.
-auth.BaseURL(subdomain string) string
+This file is generated. Edit it in neeto-cli-commons, not here.
 
-// Login runs the browser-based auth flow and persists the token.
-auth.Login(subdomain string) (*auth.Credentials, error)
+## Talking to the API
 
-// SelectCredentials returns the credentials a command should use.
-//   - subdomain != ""   : the matching entry (error if missing).
-//   - subdomain == ""   : the one entry if exactly one is authenticated.
-//   - subdomain == "" + >1 authenticated : error asking for --subdomain.
-//   - empty store       : "Not authenticated" error.
-auth.SelectCredentials(subdomain string) (*auth.Credentials, error)
+`getClient(cmd)` returns a client already pointed at the right host and carrying the caller's
+credentials, so a command never builds a URL or reads a token itself.
 
-// Store manipulation (rarely needed by command code).
-auth.LoadStore() (*auth.Store, error)
-auth.SaveStore(s *auth.Store) error
-```
+| Call | Sends |
+|---|---|
+| `c.Get(path, params)` | `GET`, with `params` as the query string. Pass `nil` for none. |
+| `c.Post(path, body)` | `POST` with a JSON body. |
+| `c.Patch(path, body)` | `PATCH` with a JSON body. |
+| `c.Delete(path)` | `DELETE`. |
 
-## `internal/client`
+`path` is relative to `/api/external/v2`. Every call returns the raw response body, so a command
+passes it straight to a printer rather than unmarshalling it.
 
-```go
-// Constructors
-client.New(creds *auth.Credentials) *client.Client
+An error carries the server's own message, so returning it from `RunE` prints something useful
+without any handling in the command.
 
-// HTTP methods — all return json.RawMessage (nil for 204).
-c.Get(path string, params url.Values) (json.RawMessage, error)
-c.Post(path string, body interface{}) (json.RawMessage, error)
-c.Put(path string, body interface{}) (json.RawMessage, error)
-c.Patch(path string, body interface{}) (json.RawMessage, error)
-c.Delete(path string) error
+## Printing
 
-// Pagination helpers
-client.AddPaginationParams(params url.Values, page, pageSize int)
+Pick by shape, never by output format — one printer covers the table, `--json`, `--quiet` and
+`--toon`.
 
-// Errors
-client.APIError{StatusCode int, Message string, Errors []string, Suggestion string}
-```
+| Call | Use for |
+|---|---|
+| `printList(data, key, breadcrumbs)` | A collection. `key` names the array inside the body. Pagination is picked up automatically. |
+| `printResource(data, breadcrumbs)` | One record. |
+| `printActionResult(data, breadcrumbs)` | A create, update or other action. Under `--quiet` it prints just the identifier. |
+| `printMessage(text)` | A confirmation with no record behind it. |
 
-4xx and 5xx responses are returned as `*client.APIError` with the server's
-message and a contextual suggestion for common codes (401, 403, 404, 422,
-429).
-
-## `internal/output`
+Breadcrumbs are the "what to run next" hints printed under a record:
 
 ```go
-output.Print(data json.RawMessage, breadcrumbs []output.Breadcrumb)
-output.PrintWithPagination(data, pagination json.RawMessage, breadcrumbs []output.Breadcrumb)
-output.PrintMessage(msg string)           // "success" in --quiet mode
-output.PrintQuiet(data json.RawMessage, breadcrumbs []output.Breadcrumb) // prints sid/id in --quiet
+[]output.Breadcrumb{
+	{Label: "List widgets", Command: "neetodesk widgets list"},
+}
 ```
 
-Global toggles (set by root's `PersistentPreRun`):
+Columns are chosen from `priority_fields` in `.neeto-cli.yml`, identity first, up to seven
+columns. Add a field there rather than building a table by hand.
 
-```go
-output.ForceJSON // --json
-output.QuietMode // --quiet
-output.ToonMode  // --toon
-```
+## Paging
 
-Precedence: `--toon` > `--quiet` > `--json` > pretty (TTY default).
+`addPaginationFlags(cmd)` adds `--page` and `--page-size`; `paginationParams(cmd)` turns them into
+query parameters. `--page` defaults to 0, meaning the first page, in every product.
 
-## `internal/commands` helpers
+## Flags
 
-```go
-getClient(cmd *cobra.Command) (*client.Client, error)  // resolves --subdomain
-printList(data, resourceKey, breadcrumbs)              // unwraps list responses
-printResource(data, breadcrumbs)                       // for show
-printActionResult(data, breadcrumbs)                   // for create/update
-paginationParams(cmd) url.Values                       // page/page-size
-addPaginationFlags(cmd)                                // for list commands
-readJSONFile(path string) (map[string]interface{}, error)
-```
+| Call | Effect |
+|---|---|
+| `markFlagsRequired(cmd, "name", ...)` | Fails early when a flag is missing, and marks it in help. |
+| `allowJSONFileToSatisfyRequiredFlags(cmd)` | Lets `--json-file` stand in for the required flags. |
+| `readJSONFile(path)` | Reads a `--json-file` payload. |
+| `splitCSV(value)` | Splits a comma-separated flag value. |
+
+Keep only the wrappers this repo actually uses in `internal/commands/register.go`.
+
+## Global flags
+
+`--subdomain`, `--json`, `--quiet` and `--toon` are added to every command by the shared code. A
+command never declares them and never checks them; using the printers above is what makes them
+work.

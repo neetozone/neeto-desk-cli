@@ -1,7 +1,31 @@
 package main
 
-import "github.com/neetozone/neeto-desk-cli/internal/commands"
+import (
+	"fmt"
+	"os"
+
+	"github.com/neetozone/neeto-cli-commons/cli"
+	"github.com/neetozone/neeto-cli-commons/config"
+	product "github.com/neetozone/neeto-desk-cli"
+	"github.com/neetozone/neeto-desk-cli/internal/commands"
+)
+
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 func main() {
-	commands.Execute()
+	cfg, err := config.Parse(product.ConfigYAML)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	cfg.SkillMD = product.SkillMD
+
+	app := cli.New(*cfg)
+	app.SetBuildInfo(version, commit, date)
+	commands.Register(app)
+	app.Execute()
 }

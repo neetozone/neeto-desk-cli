@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"github.com/neetozone/neeto-desk-cli/internal/output"
+	"github.com/neetozone/neeto-cli-commons/output"
 	"github.com/spf13/cobra"
 )
 

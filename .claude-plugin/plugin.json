@@ -1,10 +1,11 @@
 {
   "name": "neetodesk",
-  "description": "NeetoDesk CLI",
+  "description": "manage tickets, customers and reports from the terminal",
   "author": {
     "name": "BigBinary",
     "email": "support@bigbinary.com"
   },
   "homepage": "https://github.com/neetozone/neeto-desk-cli",
-  "repository": "https://github.com/neetozone/neeto-desk-cli"
+  "repository": "https://github.com/neetozone/neeto-desk-cli",
+  "license": "MIT"
 }
