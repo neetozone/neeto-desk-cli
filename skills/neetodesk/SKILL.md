@@ -155,15 +155,15 @@ in the NeetoDesk UI.
 
 ### Customers
 
-Customers are the people who raise tickets. Only creation is currently
-supported — there is no `list`, `show`, `update`, or `delete` for
-customers yet, and no command takes a customer email to find their tickets.
-A ticket response carries its customer's email, so the only way to match a
-customer to their tickets today is to page `tickets list` and read the
-`customer` field.
+Customers are the people who raise tickets. `list`, `show`, and `create` are
+supported; there is no `update` or `delete` yet. `customers list --email`
+filters to one exact address, which is the quickest way to turn an email into
+a customer id.
 
 | Command | Positional | Flags |
 |---|---|---|
+| `customers list` | — | `--email` (filter by exact email), `--page`, `--page-size` |
+| `customers show` | `<id>` | — |
 | `customers create` | — | `--email*`, `--first-name`, `--last-name`, `--phone`, `--language` (preferred language), `--time-zone` (e.g. `America/New_York`), `--description`, `--company-id` |
 
 ### Team members
