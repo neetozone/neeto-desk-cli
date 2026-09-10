@@ -119,13 +119,17 @@ description given at creation is stored as the ticket's first comment.
 
 | Command | Positional | Flags |
 |---|---|---|
-| `tickets list` | — | `--status` (comma-separated, e.g. `open,pending`), `--page`, `--page-size` |
+| `tickets list` | — | `--status` (comma-separated, e.g. `open,pending`), `--sort` (`created_at` or `updated_at`, default `created_at`), `--order` (`asc` or `desc`, default `desc`), `--page`, `--page-size` |
 | `tickets show` | `<ticket-number>` | — |
 | `tickets create` | — | `--email*` (customer email), `--subject*`, `--description*`, `--name` (customer name), `--status`, `--priority` (`low`/`medium`/`high`/`urgent`), `--category`, `--agent-id`, `--group-id`, `--assignee-email` |
 | `tickets update` | `<ticket-number>` | `--subject`, `--description`, `--status`, `--priority`, `--category`, `--agent-id`, `--group-id`, `--assignee-email` (all partial — only the flags set are sent) |
 
 An agent can be assigned either by `--agent-id` (the team member's id) or
 by `--assignee-email`; same for a group via `--group-id`.
+
+`tickets list` returns newest first by default, matching the neeto-desk web
+UI. Pass `--sort updated_at` to order by last activity, or `--order asc` for
+oldest first.
 
 ### Ticket comments
 

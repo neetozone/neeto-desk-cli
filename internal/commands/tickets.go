@@ -3,6 +3,8 @@ package commands
 import (
 	"fmt"
 	"net/url"
+	"slices"
+	"strings"
 
 	"github.com/neetozone/neeto-cli-commons/output"
 	"github.com/spf13/cobra"
@@ -13,10 +15,43 @@ var ticketsCmd = &cobra.Command{
 	Short: "Manage tickets",
 }
 
+const (
+	defaultTicketSort  = "created_at"
+	defaultTicketOrder = "desc"
+)
+
+var (
+	validTicketSorts  = []string{"created_at", "updated_at"}
+	validTicketOrders = []string{"asc", "desc"}
+)
+
+func validateTicketSort(v string) error {
+	if v == "" || slices.Contains(validTicketSorts, v) {
+		return nil
+	}
+	return fmt.Errorf("invalid sort %q: must be one of %s", v, strings.Join(validTicketSorts, ", "))
+}
+
+func validateTicketOrder(v string) error {
+	if v == "" || slices.Contains(validTicketOrders, v) {
+		return nil
+	}
+	return fmt.Errorf("invalid order %q: must be one of %s", v, strings.Join(validTicketOrders, ", "))
+}
+
 var ticketsListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List tickets",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		sort, _ := cmd.Flags().GetString("sort")
+		if err := validateTicketSort(sort); err != nil {
+			return err
+		}
+		order, _ := cmd.Flags().GetString("order")
+		if err := validateTicketOrder(order); err != nil {
+			return err
+		}
+
 		c, err := getClient(cmd)
 		if err != nil {
 			return err
@@ -25,6 +60,12 @@ var ticketsListCmd = &cobra.Command{
 		params := paginationParams(cmd)
 		if status, _ := cmd.Flags().GetString("status"); status != "" {
 			params.Set("status", status)
+		}
+		if sort != "" {
+			params.Set("sort", sort)
+		}
+		if order != "" {
+			params.Set("order", order)
 		}
 
 		data, err := c.Get("/tickets", params)
@@ -165,6 +206,8 @@ var ticketsUpdateCmd = &cobra.Command{
 func init() {
 	addPaginationFlags(ticketsListCmd)
 	ticketsListCmd.Flags().String("status", "", "Filter by status (comma-separated, e.g. open,pending)")
+	ticketsListCmd.Flags().String("sort", defaultTicketSort, "Sort field: created_at or updated_at")
+	ticketsListCmd.Flags().String("order", defaultTicketOrder, "Sort direction: asc or desc")
 
 	ticketsCreateCmd.Flags().String("email", "", "Customer email")
 	ticketsCreateCmd.Flags().String("subject", "", "Ticket subject")
