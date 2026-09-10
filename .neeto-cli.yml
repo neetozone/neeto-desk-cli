@@ -2,6 +2,7 @@ pretty_name: NeetoDesk
 binary_name: neetodesk
 short_description: manage tickets, customers and reports from the terminal
 long_description: A command-line interface for NeetoDesk. Manage tickets and comments, invite team members, and pull reports.
+docs_url: https://apidocs.neetodesk.com/cli/introduction
 api_base_path: /api/external/v2
 root_examples:
   - neetodesk tickets list
