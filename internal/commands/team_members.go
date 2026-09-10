@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/neetozone/neeto-cli-commons/output"
 	"github.com/spf13/cobra"
@@ -12,10 +14,43 @@ var teamMembersCmd = &cobra.Command{
 	Short: "Manage team members (agents)",
 }
 
+const (
+	defaultTeamMemberSort  = "created_at"
+	defaultTeamMemberOrder = "desc"
+)
+
+var (
+	validTeamMemberSorts  = []string{"created_at", "updated_at", "email", "first_name", "last_name"}
+	validTeamMemberOrders = []string{"asc", "desc"}
+)
+
+func validateTeamMemberSort(v string) error {
+	if v == "" || slices.Contains(validTeamMemberSorts, v) {
+		return nil
+	}
+	return fmt.Errorf("invalid sort %q: must be one of %s", v, strings.Join(validTeamMemberSorts, ", "))
+}
+
+func validateTeamMemberOrder(v string) error {
+	if v == "" || slices.Contains(validTeamMemberOrders, v) {
+		return nil
+	}
+	return fmt.Errorf("invalid order %q: must be one of %s", v, strings.Join(validTeamMemberOrders, ", "))
+}
+
 var teamMembersListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List team members",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		sort, _ := cmd.Flags().GetString("sort")
+		if err := validateTeamMemberSort(sort); err != nil {
+			return err
+		}
+		order, _ := cmd.Flags().GetString("order")
+		if err := validateTeamMemberOrder(order); err != nil {
+			return err
+		}
+
 		c, err := getClient(cmd)
 		if err != nil {
 			return err
@@ -24,6 +59,12 @@ var teamMembersListCmd = &cobra.Command{
 		params := paginationParams(cmd)
 		if email, _ := cmd.Flags().GetString("email"); email != "" {
 			params.Set("email", email)
+		}
+		if sort != "" {
+			params.Set("sort", sort)
+		}
+		if order != "" {
+			params.Set("order", order)
 		}
 
 		data, err := c.Get("/team-members", params)
@@ -147,6 +188,8 @@ var teamMembersDeleteCmd = &cobra.Command{
 func init() {
 	addPaginationFlags(teamMembersListCmd)
 	teamMembersListCmd.Flags().String("email", "", "Filter by email")
+	teamMembersListCmd.Flags().String("sort", defaultTeamMemberSort, "Sort field: created_at, updated_at, email, first_name or last_name")
+	teamMembersListCmd.Flags().String("order", defaultTeamMemberOrder, "Sort direction: asc or desc")
 
 	teamMembersCreateCmd.Flags().StringArray("email", []string{}, "Email addresses to invite (repeat flag for multiple)")
 	teamMembersCreateCmd.Flags().String("role", "", "Organization role (e.g. agent, admin)")

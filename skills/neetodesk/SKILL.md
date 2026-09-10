@@ -164,9 +164,13 @@ customers yet; look up a customer's tickets by their email through
 
 Team members are the workspace's agents and admins.
 
+`team-members list` returns newest first by default, matching the neeto-desk
+web UI. Pass `--sort email` or `--sort last_name` to list them alphabetically,
+or `--order asc` for oldest first.
+
 | Command | Positional | Flags |
 |---|---|---|
-| `team-members list` | — | `--email` (filter), `--page`, `--page-size` |
+| `team-members list` | — | `--email` (filter), `--sort` (`created_at`, `updated_at`, `email`, `first_name` or `last_name`, default `created_at`), `--order` (`asc` or `desc`, default `desc`), `--page`, `--page-size` |
 | `team-members show` | `<id>` | — |
 | `team-members create` | — | `--email*` (repeat the flag for multiple invitees), `--role*` (e.g. `agent`, `admin`), `--send-invitation-email` (bool, default `true`) |
 | `team-members update` | `<id>` | `--email`, `--first-name`, `--last-name`, `--role`, `--time-zone` (all partial) |
