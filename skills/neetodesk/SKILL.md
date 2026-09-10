@@ -120,9 +120,9 @@ description given at creation is stored as the ticket's first comment.
 | Command | Positional | Flags |
 |---|---|---|
 | `tickets list` | — | `--status` (comma-separated, e.g. `open,pending`), `--page`, `--page-size` |
-| `tickets show` | `<id>` | — |
+| `tickets show` | `<ticket-number>` | — |
 | `tickets create` | — | `--email*` (customer email), `--subject*`, `--description*`, `--name` (customer name), `--status`, `--priority` (`low`/`medium`/`high`/`urgent`), `--category`, `--agent-id`, `--group-id`, `--assignee-email` |
-| `tickets update` | `<id>` | `--subject`, `--description`, `--status`, `--priority`, `--category`, `--agent-id`, `--group-id`, `--assignee-email` (all partial — only the flags set are sent) |
+| `tickets update` | `<ticket-number>` | `--subject`, `--description`, `--status`, `--priority`, `--category`, `--agent-id`, `--group-id`, `--assignee-email` (all partial — only the flags set are sent) |
 
 An agent can be assigned either by `--agent-id` (the team member's id) or
 by `--assignee-email`; same for a group via `--group-id`.
@@ -134,9 +134,9 @@ visible to the customer; a `note` is internal to the workspace only.
 
 | Command | Positional | Flags |
 |---|---|---|
-| `tickets comments list` | `<ticket-id>` | `--page`, `--page-size` |
-| `tickets comments show` | `<ticket-id> <comment-id>` | — |
-| `tickets comments create` | `<ticket-id>` | `--content*` (HTML), `--comment-type` (`reply` or `note`, default `reply`) |
+| `tickets comments list` | `<ticket-number>` | `--page`, `--page-size` |
+| `tickets comments show` | `<ticket-number> <comment-id>` | — |
+| `tickets comments create` | `<ticket-number>` | `--content*` (HTML), `--comment-type` (`reply` or `note`, default `reply`) |
 
 ### Ticket drafts
 
@@ -147,14 +147,16 @@ in the NeetoDesk UI.
 
 | Command | Positional | Flags |
 |---|---|---|
-| `tickets drafts create` | `<ticket-id>` | `--content*` (HTML), `--comment-type` (`reply` or `note`, default `reply`), `--author-email` (agent the draft is written as) |
+| `tickets drafts create` | `<ticket-number>` | `--content*` (HTML), `--comment-type` (`reply` or `note`, default `reply`), `--author-email` (agent the draft is written as) |
 
 ### Customers
 
 Customers are the people who raise tickets. Only creation is currently
 supported — there is no `list`, `show`, `update`, or `delete` for
-customers yet; look up a customer's tickets by their email through
-`tickets list` / `tickets show` instead.
+customers yet, and no command takes a customer email to find their tickets.
+A ticket response carries its customer's email, so the only way to match a
+customer to their tickets today is to page `tickets list` and read the
+`customer` field.
 
 | Command | Positional | Flags |
 |---|---|---|
@@ -236,21 +238,21 @@ neetodesk tickets create \
   --priority high --quiet
 # → prints the new ticket id
 
-neetodesk tickets comments create <ticket-id> \
+neetodesk tickets comments create 137 \
   --content "<p>Thanks for reporting this — looking into it now.</p>" \
   --comment-type reply
 ```
 
 ### Leave an internal note without notifying the customer
 ```bash
-neetodesk tickets comments create <ticket-id> \
+neetodesk tickets comments create 137 \
   --content "Escalated to engineering, see INFRA-482." \
   --comment-type note
 ```
 
 ### Draft a reply before sending it
 ```bash
-neetodesk tickets drafts create <ticket-id> \
+neetodesk tickets drafts create 137 \
   --content "<p>Draft: refund has been processed.</p>" \
   --author-email agent@acme.com
 ```
@@ -263,7 +265,7 @@ neetodesk tickets list --status open,pending --page-size 50 --toon
 
 ### Reassign and re-prioritize a ticket
 ```bash
-neetodesk tickets update <ticket-id> \
+neetodesk tickets update 137 \
   --assignee-email agent@acme.com --priority urgent --status open
 ```
 
@@ -306,7 +308,13 @@ stderr. Common errors the agent should expect:
 
 - Dates: `YYYY-MM-DD`. Time zones: IANA names (`America/New_York`).
 - Comment/draft content is HTML, not plain text or Markdown.
-- IDs: tickets, comments, team members and customers are addressed by the
-  `id` field returned in their `show`/`list`/`create` response.
+- Tickets carry two identifiers, both returned on every ticket response: the
+  `number` field, a short per-workspace integer, and the `id` field, a
+  36-character UUID. Every ticket command accepts either — `show`, `update`,
+  `comments list`/`show`/`create` and `drafts create`. Prefer `number`: it is
+  what the neeto-desk web URL shows, it is far harder to mistype, and it costs
+  a fraction of the tokens the UUID does.
+- Comments, team members and customers have no short number. Address them by
+  the `id` field returned in their `show`/`list`/`create` response.
 - For any flag or field not covered above, `neetodesk commands` is
   authoritative.

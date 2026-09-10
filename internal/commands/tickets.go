@@ -33,16 +33,16 @@ var ticketsListCmd = &cobra.Command{
 		}
 
 		printList(data, "tickets", []output.Breadcrumb{
-			{Label: "Show", Command: "neetodesk tickets show <id>"},
-			{Label: "Update", Command: "neetodesk tickets update <id>"},
+			{Label: "Show", Command: "neetodesk tickets show <ticket-number>"},
+			{Label: "Update", Command: "neetodesk tickets update <ticket-number>"},
 		})
 		return nil
 	},
 }
 
 var ticketsShowCmd = &cobra.Command{
-	Use:   "show <id>",
-	Short: "Show a ticket",
+	Use:   "show <ticket-number>",
+	Short: "Show a ticket by number or id",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := getClient(cmd)
@@ -110,15 +110,15 @@ var ticketsCreateCmd = &cobra.Command{
 		}
 
 		printActionResult(data, []output.Breadcrumb{
-			{Label: "Show", Command: "neetodesk tickets show <id>"},
+			{Label: "Show", Command: "neetodesk tickets show <ticket-number>"},
 		})
 		return nil
 	},
 }
 
 var ticketsUpdateCmd = &cobra.Command{
-	Use:   "update <id>",
-	Short: "Update a ticket",
+	Use:   "update <ticket-number>",
+	Short: "Update a ticket by number or id",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := getClient(cmd)
