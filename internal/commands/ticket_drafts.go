@@ -12,7 +12,7 @@ var ticketDraftsCmd = &cobra.Command{
 }
 
 var ticketDraftsCreateCmd = &cobra.Command{
-	Use:   "create <ticket-id>",
+	Use:   "create <ticket-number>",
 	Short: "Create or upsert a draft on a ticket",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

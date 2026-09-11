@@ -22,7 +22,7 @@ func validateCommentType(v string) error {
 }
 
 var ticketCommentsListCmd = &cobra.Command{
-	Use:   "list <ticket-id>",
+	Use:   "list <ticket-number>",
 	Short: "List comments on a ticket",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -46,7 +46,7 @@ var ticketCommentsListCmd = &cobra.Command{
 }
 
 var ticketCommentsShowCmd = &cobra.Command{
-	Use:   "show <ticket-id> <comment-id>",
+	Use:   "show <ticket-number> <comment-id>",
 	Short: "Show a comment on a ticket",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -67,7 +67,7 @@ var ticketCommentsShowCmd = &cobra.Command{
 }
 
 var ticketCommentsCreateCmd = &cobra.Command{
-	Use:   "create <ticket-id>",
+	Use:   "create <ticket-number>",
 	Short: "Add a comment to a ticket",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
