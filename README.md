@@ -122,6 +122,7 @@ Every command accepts:
 | `--json` | Force JSON envelope output. |
 | `--quiet` | Emit raw data only. Action commands print just the identifier; `delete` prints `success`. |
 | `--toon` | TOON (Token-Optimized Output Notation) — compact format for LLMs. |
+| `--verbose` | Expand every field of a record instead of a table. |
 <!-- neeto-cli-commons:global-flags:end -->
 
 ## Adding product-specific commands
