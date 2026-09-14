@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/neetozone/neeto-cli-commons/client"
 	"github.com/spf13/cobra"
@@ -149,7 +150,7 @@ func sendFile(upload attachmentUpload, path string, size int64) error {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return fmt.Errorf(
 			"Could not upload %s: the storage service answered %d. %s",
-			path, resp.StatusCode, strings.TrimSpace(string(body)))
+			path, resp.StatusCode, printable(body))
 	}
 
 	return nil
@@ -169,6 +170,19 @@ func fileChecksum(path string) (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(digest.Sum(nil)), nil
+}
+
+// The storage service answers with XML, and a non-S3 one may answer with anything at
+// all, so control characters are dropped before the body reaches the terminal.
+func printable(body []byte) string {
+	cleaned := strings.Map(func(r rune) rune {
+		if r == '\n' || r == '\t' || unicode.IsPrint(r) {
+			return r
+		}
+		return -1
+	}, string(body))
+
+	return strings.TrimSpace(cleaned)
 }
 
 func contentTypeFor(path string) string {
