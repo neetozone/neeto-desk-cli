@@ -145,6 +145,14 @@ var ticketsCreateCmd = &cobra.Command{
 			body["assignee_email"] = v
 		}
 
+		attachments, err := attachmentSignedIDs(cmd, c)
+		if err != nil {
+			return err
+		}
+		if len(attachments) > 0 {
+			body["attachments"] = attachments
+		}
+
 		data, err := c.Post("/tickets", body)
 		if err != nil {
 			return err
@@ -219,6 +227,7 @@ func init() {
 	ticketsCreateCmd.Flags().String("agent-id", "", "Agent ID to assign")
 	ticketsCreateCmd.Flags().String("group-id", "", "Group ID to assign")
 	ticketsCreateCmd.Flags().String("assignee-email", "", "Agent email to assign")
+	addAttachFlag(ticketsCreateCmd)
 	_ = ticketsCreateCmd.MarkFlagRequired("email")
 	_ = ticketsCreateCmd.MarkFlagRequired("subject")
 	_ = ticketsCreateCmd.MarkFlagRequired("description")

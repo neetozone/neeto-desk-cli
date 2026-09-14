@@ -121,11 +121,15 @@ description given at creation is stored as the ticket's first comment.
 |---|---|---|
 | `tickets list` | — | `--status` (comma-separated, e.g. `open,pending`), `--sort` (`created_at` or `updated_at`, default `created_at`), `--order` (`asc` or `desc`, default `desc`), `--page`, `--page-size` |
 | `tickets show` | `<ticket-number>` | — |
-| `tickets create` | — | `--email*` (customer email), `--subject*`, `--description*`, `--name` (customer name), `--status`, `--priority` (`low`/`medium`/`high`/`urgent`), `--category`, `--agent-id`, `--group-id`, `--assignee-email` |
+| `tickets create` | — | `--email*` (customer email), `--subject*`, `--description*`, `--name` (customer name), `--status`, `--priority` (`low`/`medium`/`high`/`urgent`), `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--attach` (path to a file, repeat for more than one) |
 | `tickets update` | `<ticket-number>` | `--subject`, `--description`, `--status`, `--priority`, `--category`, `--agent-id`, `--group-id`, `--assignee-email` (all partial — only the flags set are sent) |
 
 An agent can be assigned either by `--agent-id` (the team member's id) or
 by `--assignee-email`; same for a group via `--group-id`.
+
+`--attach` uploads each file and attaches it to the ticket's first comment.
+Every file is uploaded before the ticket is created, so a file that cannot be
+read or uploaded fails the command and creates nothing.
 
 `tickets list` returns newest first by default, matching the neeto-desk web
 UI. Pass `--sort updated_at` to order by last activity, or `--order asc` for
@@ -140,7 +144,21 @@ visible to the customer; a `note` is internal to the workspace only.
 |---|---|---|
 | `tickets comments list` | `<ticket-number>` | `--page`, `--page-size` |
 | `tickets comments show` | `<ticket-number> <comment-id>` | — |
-| `tickets comments create` | `<ticket-number>` | `--content*` (HTML), `--comment-type` (`reply` or `note`, default `reply`) |
+| `tickets comments create` | `<ticket-number>` | `--content*` (HTML), `--comment-type` (`reply` or `note`, default `reply`), `--attach` (path to a file, repeat for more than one) |
+
+### Attachments
+
+| Command | Positional | Flags |
+|---|---|---|
+| `attachments upload` | `<file>` | — |
+
+`attachments upload` uploads one file and prints its `signed_id`, for when the
+file has to be attached by a later call rather than in the same step. Pass that
+id as `attachments` when creating a ticket or comment through the API. Use
+`--attach` instead to upload and attach in one step.
+
+A `signed_id` is only accepted in the workspace that uploaded it, and a file
+that is never attached to anything is reclaimed.
 
 ### Ticket drafts
 
@@ -249,6 +267,24 @@ neetodesk tickets create \
 neetodesk tickets comments create 137 \
   --content "<p>Thanks for reporting this — looking into it now.</p>" \
   --comment-type reply
+```
+
+### Attach a screenshot to a ticket and to a reply
+```bash
+neetodesk tickets create \
+  --email customer@example.com \
+  --subject "Printer is jammed" \
+  --description "Photo attached." \
+  --attach ~/Desktop/printer.png --attach ~/Desktop/error-log.txt
+
+neetodesk tickets comments create 137 \
+  --content "<p>Here is the replacement part.</p>" \
+  --attach ~/Desktop/part-diagram.pdf
+```
+
+### Upload a file now and attach it later
+```bash
+SIGNED_ID=$(neetodesk attachments upload ~/Desktop/printer.png --quiet)
 ```
 
 ### Leave an internal note without notifying the customer
