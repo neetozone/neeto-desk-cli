@@ -36,12 +36,15 @@ func TestFileChecksumReportsAMissingFile(t *testing.T) {
 
 func TestContentTypeFor(t *testing.T) {
 	cases := map[string]string{
-		"screenshot.png": "image/png",
-		"SCREENSHOT.PNG": "image/png",
-		"report.PDF":     "application/pdf",
-		"report.pdf":     "application/pdf",
-		"notes":          "application/octet-stream",
-		"archive.bin":    "application/octet-stream",
+		"screenshot.png":      "image/png",
+		"SCREENSHOT.PNG":      "image/png",
+		"report.PDF":          "application/pdf",
+		"report.pdf":          "application/pdf",
+		"notes":               "application/octet-stream",
+		"archive.bin":         "application/octet-stream",
+		"logs.2026-09-14.txt": "text/plain",
+		"trailing.":           "application/octet-stream",
+		".hidden":             "application/octet-stream",
 	}
 
 	for name, want := range cases {
