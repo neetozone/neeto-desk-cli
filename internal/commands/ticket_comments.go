@@ -87,6 +87,14 @@ var ticketCommentsCreateCmd = &cobra.Command{
 			body["comment_type"] = v
 		}
 
+		attachments, err := attachmentSignedIDs(cmd, c)
+		if err != nil {
+			return err
+		}
+		if len(attachments) > 0 {
+			body["attachments"] = attachments
+		}
+
 		path := fmt.Sprintf("/tickets/%s/comments", args[0])
 		data, err := c.Post(path, body)
 		if err != nil {
@@ -103,6 +111,7 @@ func init() {
 
 	ticketCommentsCreateCmd.Flags().String("content", "", "Comment content (HTML)")
 	ticketCommentsCreateCmd.Flags().String("comment-type", "reply", "Comment type: reply or note")
+	addAttachFlag(ticketCommentsCreateCmd)
 	_ = ticketCommentsCreateCmd.MarkFlagRequired("content")
 
 	ticketCommentsCmd.AddCommand(ticketCommentsListCmd)
