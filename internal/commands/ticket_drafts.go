@@ -35,6 +35,14 @@ var ticketDraftsCreateCmd = &cobra.Command{
 			body["author_email"] = v
 		}
 
+		attachments, err := attachmentSignedIDs(cmd, c)
+		if err != nil {
+			return err
+		}
+		if len(attachments) > 0 {
+			body["attachments"] = attachments
+		}
+
 		path := fmt.Sprintf("/tickets/%s/drafts", args[0])
 		data, err := c.Post(path, body)
 		if err != nil {
@@ -50,6 +58,7 @@ func init() {
 	ticketDraftsCreateCmd.Flags().String("content", "", "Draft content (HTML)")
 	ticketDraftsCreateCmd.Flags().String("comment-type", "reply", "Draft type: reply or note")
 	ticketDraftsCreateCmd.Flags().String("author-email", "", "Author agent email")
+	addAttachFlag(ticketDraftsCreateCmd)
 	_ = ticketDraftsCreateCmd.MarkFlagRequired("content")
 
 	ticketDraftsCmd.AddCommand(ticketDraftsCreateCmd)

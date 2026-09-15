@@ -201,6 +201,14 @@ var ticketsUpdateCmd = &cobra.Command{
 			body["assignee_email"] = v
 		}
 
+		attachments, err := attachmentSignedIDs(cmd, c)
+		if err != nil {
+			return err
+		}
+		if len(attachments) > 0 {
+			body["attachments"] = attachments
+		}
+
 		data, err := c.Patch(fmt.Sprintf("/tickets/%s", args[0]), body)
 		if err != nil {
 			return err
@@ -240,6 +248,7 @@ func init() {
 	ticketsUpdateCmd.Flags().String("agent-id", "", "Agent ID to assign")
 	ticketsUpdateCmd.Flags().String("group-id", "", "Group ID to assign")
 	ticketsUpdateCmd.Flags().String("assignee-email", "", "Agent email to assign")
+	addAttachFlag(ticketsUpdateCmd)
 
 	ticketsCmd.AddCommand(ticketsListCmd)
 	ticketsCmd.AddCommand(ticketsShowCmd)
