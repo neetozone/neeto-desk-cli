@@ -122,7 +122,7 @@ description given at creation is stored as the ticket's first comment.
 | `tickets list` | — | `--status` (comma-separated, e.g. `open,pending`), `--sort` (`created_at` or `updated_at`, default `created_at`), `--order` (`asc` or `desc`, default `desc`), `--page`, `--page-size` |
 | `tickets show` | `<ticket-number>` | — |
 | `tickets create` | — | `--email*` (customer email), `--subject*`, `--description*`, `--name` (customer name), `--status`, `--priority` (`low`/`medium`/`high`/`urgent`), `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--attach` (path to a file, repeat for more than one) |
-| `tickets update` | `<ticket-number>` | `--subject`, `--description`, `--status`, `--priority`, `--category`, `--agent-id`, `--group-id`, `--assignee-email` (all partial — only the flags set are sent), `--attach` (path to a file, repeat for more than one) |
+| `tickets update` | `<ticket-number>` | `--subject`, `--description`, `--status`, `--priority`, `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--attach` (path to a file, repeat for more than one) (all partial — only the flags set are sent) |
 
 An agent can be assigned either by `--agent-id` (the team member's id) or
 by `--assignee-email`; same for a group via `--group-id`.
@@ -134,7 +134,8 @@ before the failure are left unattached and reclaimed, so re-running is safe.
 
 `tickets update --attach` adds files to the ticket's first comment too, beside
 the ones already there. A ticket with no first comment cannot take files that
-way; use `tickets comments create --attach` instead.
+way: the command fails with `This ticket has no opening message to attach a
+file to.` Retry it as `tickets comments create --attach` when you see that.
 
 `tickets list` returns newest first by default, matching the neeto-desk web
 UI. Pass `--sort updated_at` to order by last activity, or `--order asc` for
@@ -163,7 +164,9 @@ id as `attachments` when creating or updating a ticket, or creating a comment or
 draft, through the API. Use `--attach` instead to upload and attach in one step.
 
 Attaching a file applies a 10 MB ceiling, which is lower than the 50 MB upload
-ceiling, so a file between the two uploads and is then refused.
+ceiling, so a file between the two uploads and is then refused. Check the size
+on disk before you attach anything: over 10 MB, say so rather than spending the
+upload, and over 50 MB it is refused outright.
 
 A `signed_id` is only accepted in the workspace that uploaded it, and a file
 that is never attached to anything is reclaimed.
@@ -171,8 +174,11 @@ that is never attached to anything is reclaimed.
 ### Ticket drafts
 
 `tickets drafts create --attach` keeps files on the draft until it is sent.
-Passing `--attach` replaces the files the draft already held; leaving it off
-keeps them as they are.
+
+**Drafts replace, tickets append.** `--attach` on a draft replaces every file
+the draft already held, so pass the full set you want to end up with. Leave the
+flag off entirely to keep the existing files while changing only the text. This
+is the opposite of `tickets update --attach`, which adds to what is there.
 
 A draft is an unsent reply or note. A ticket holds at most one draft per
 comment type — creating a new one for the same type replaces the previous
