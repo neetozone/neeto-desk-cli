@@ -133,9 +133,6 @@ client, and output helpers.
 
 Quick API wrapper reference: [`docs/api-wrapper-reference.md`](docs/api-wrapper-reference.md).
 
-Attachments talk to two hosts, so they need a running server to exercise: see
-[`docs/verifying-attachments-locally.md`](docs/verifying-attachments-locally.md).
-
 <!-- neeto-cli-commons:release:start -->
 ## Release
 
