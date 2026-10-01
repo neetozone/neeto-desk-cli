@@ -57,6 +57,38 @@ func TestValidateTicketOrder(t *testing.T) {
 	}
 }
 
+func TestValidateTicketFieldFilter(t *testing.T) {
+	cases := []struct {
+		name    string
+		field   string
+		value   string
+		wantErr string
+	}{
+		{"both empty is allowed", "", "", ""},
+		{"both set is allowed", "Browser", "Chrome", ""},
+		{"value without name is rejected", "", "Chrome", "--field-name is required"},
+		{"name without value is rejected", "Browser", "", "--field-value is required"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateTicketFieldFilter(tc.field, tc.value)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Errorf("validateTicketFieldFilter(%q, %q) = %v, want nil", tc.field, tc.value, err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("validateTicketFieldFilter(%q, %q) = nil, want error", tc.field, tc.value)
+			}
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Errorf("error = %v, want it to mention %q", err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestTicketsListDefaultsToNewestFirst(t *testing.T) {
 	sort, err := ticketsListCmd.Flags().GetString("sort")
 	if err != nil {

@@ -184,13 +184,16 @@ func ticketTimeSeriesReport(data json.RawMessage) ([]string, [][]interface{}, bo
 }
 
 func reportParams(cmd *cobra.Command) url.Values {
-	params := dateRangeParams(cmd)
-	for key, values := range paginationParams(cmd) {
+	return mergeParams(dateRangeParams(cmd), paginationParams(cmd))
+}
+
+func mergeParams(dst, src url.Values) url.Values {
+	for key, values := range src {
 		for _, value := range values {
-			params.Add(key, value)
+			dst.Add(key, value)
 		}
 	}
-	return params
+	return dst
 }
 
 func init() {

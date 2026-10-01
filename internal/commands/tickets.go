@@ -39,6 +39,16 @@ func validateTicketOrder(v string) error {
 	return fmt.Errorf("invalid order %q: must be one of %s", v, strings.Join(validTicketOrders, ", "))
 }
 
+func validateTicketFieldFilter(name, value string) error {
+	if (name == "") == (value == "") {
+		return nil
+	}
+	if name == "" {
+		return fmt.Errorf("--field-name is required when --field-value is set")
+	}
+	return fmt.Errorf("--field-value is required when --field-name is set")
+}
+
 var ticketsListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List tickets",
@@ -51,6 +61,11 @@ var ticketsListCmd = &cobra.Command{
 		if err := validateTicketOrder(order); err != nil {
 			return err
 		}
+		fieldName, _ := cmd.Flags().GetString("field-name")
+		fieldValue, _ := cmd.Flags().GetString("field-value")
+		if err := validateTicketFieldFilter(fieldName, fieldValue); err != nil {
+			return err
+		}
 
 		c, err := getClient(cmd)
 		if err != nil {
@@ -61,6 +76,23 @@ var ticketsListCmd = &cobra.Command{
 		if status, _ := cmd.Flags().GetString("status"); status != "" {
 			params.Set("status", status)
 		}
+		if v, _ := cmd.Flags().GetString("customer-id"); v != "" {
+			params.Set("customer_id", v)
+		}
+		if v, _ := cmd.Flags().GetString("customer-email"); v != "" {
+			params.Set("customer_email", v)
+		}
+		if v, _ := cmd.Flags().GetString("assignee-id"); v != "" {
+			params.Set("assignee_id", v)
+		}
+		if v, _ := cmd.Flags().GetString("assignee-email"); v != "" {
+			params.Set("assignee_email", v)
+		}
+		if fieldName != "" {
+			params.Set("field_name", fieldName)
+			params.Set("field_value", fieldValue)
+		}
+		mergeParams(params, dateRangeParams(cmd))
 		if sort != "" {
 			params.Set("sort", sort)
 		}
@@ -222,6 +254,13 @@ var ticketsUpdateCmd = &cobra.Command{
 func init() {
 	addPaginationFlags(ticketsListCmd)
 	ticketsListCmd.Flags().String("status", "", "Filter by status (comma-separated, e.g. open,pending)")
+	ticketsListCmd.Flags().String("customer-id", "", "Filter by customer ID")
+	ticketsListCmd.Flags().String("customer-email", "", "Filter by customer email")
+	ticketsListCmd.Flags().String("assignee-id", "", "Filter by assignee ID")
+	ticketsListCmd.Flags().String("assignee-email", "", "Filter by assignee email")
+	ticketsListCmd.Flags().String("field-name", "", "Custom ticket field to filter by, used with --field-value")
+	ticketsListCmd.Flags().String("field-value", "", "Value the custom ticket field must have, used with --field-name")
+	addDateRangeFlags(ticketsListCmd)
 	ticketsListCmd.Flags().String("sort", defaultTicketSort, "Sort field: created_at or updated_at")
 	ticketsListCmd.Flags().String("order", defaultTicketOrder, "Sort direction: asc or desc")
 
