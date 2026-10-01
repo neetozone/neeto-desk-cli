@@ -1,8 +1,16 @@
 package commands
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/neetozone/neeto-cli-commons/cli"
+	"github.com/neetozone/neeto-cli-commons/config"
+	product "github.com/neetozone/neeto-desk-cli"
 )
 
 func TestValidateTicketSort(t *testing.T) {
@@ -137,5 +145,62 @@ func TestTicketsListRejectsBadSortBeforeContactingTheAPI(t *testing.T) {
 				t.Errorf("error = %v, want it to mention %q", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestTicketsListSendsFiltersAsAPIParameters(t *testing.T) {
+	var query string
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query = r.URL.RawQuery
+		_, _ = w.Write([]byte(`{"tickets":[]}`))
+	}))
+	defer api.Close()
+
+	home := t.TempDir()
+	dir := filepath.Join(home, ".config", "neetodesk")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatalf("could not create the config directory: %v", err)
+	}
+	creds := `{"credentials":[{"subdomain":"acme","email":"a@acme.com","session_token":"tok"}]}`
+	if err := os.WriteFile(filepath.Join(dir, "auth.json"), []byte(creds), 0o600); err != nil {
+		t.Fatalf("could not write the credentials: %v", err)
+	}
+	t.Setenv("HOME", home)
+	t.Setenv("NEETODESK_BASE_URL", api.URL)
+
+	cfg, err := config.Parse(product.ConfigYAML)
+	if err != nil {
+		t.Fatalf("could not parse the product config: %v", err)
+	}
+	Register(cli.New(*cfg))
+
+	flags := map[string]string{
+		"status": "open,pending", "customer-id": "cus-1", "customer-email": "a@acme.com",
+		"assignee-id": "agent-1", "assignee-email": "b@acme.com",
+		"field-name": "single one", "field-value": "two",
+		"range-type": "custom", "start-date": "2026-01-01", "end-date": "2026-01-31",
+		"sort": "updated_at", "order": "asc", "page": "2", "page-size": "25",
+	}
+	t.Cleanup(func() {
+		for flag := range flags {
+			_ = ticketsListCmd.Flags().Set(flag, ticketsListCmd.Flags().Lookup(flag).DefValue)
+		}
+	})
+	for flag, value := range flags {
+		if err := ticketsListCmd.Flags().Set(flag, value); err != nil {
+			t.Fatalf("could not set --%s: %v", flag, err)
+		}
+	}
+
+	if err := ticketsListCmd.RunE(ticketsListCmd, nil); err != nil {
+		t.Fatalf("tickets list returned %v", err)
+	}
+
+	want := "assignee_email=b%40acme.com&assignee_id=agent-1&customer_email=a%40acme.com" +
+		"&customer_id=cus-1&end_date=2026-01-31&field_name=single+one&field_value=two" +
+		"&order=asc&page=2&page_number=2&page_size=25&range_type=custom&sort=updated_at" +
+		"&start_date=2026-01-01&status=open%2Cpending"
+	if query != want {
+		t.Errorf("query = %q, want %q", query, want)
 	}
 }
