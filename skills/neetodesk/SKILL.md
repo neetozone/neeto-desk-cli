@@ -119,7 +119,7 @@ description given at creation is stored as the ticket's first comment.
 
 | Command | Positional | Flags |
 |---|---|---|
-| `tickets list` | — | `--status` (comma-separated, e.g. `open,pending`), `--sort` (`created_at` or `updated_at`, default `created_at`), `--order` (`asc` or `desc`, default `desc`), `--page`, `--page-size` |
+| `tickets list` | — | `--status` (comma-separated, e.g. `open,pending`), `--customer-id`, `--customer-email`, `--assignee-id`, `--assignee-email`, `--field-name` + `--field-value` (custom ticket field), `--range-type`, `--start-date`, `--end-date`, `--sort` (`created_at` or `updated_at`, default `created_at`), `--order` (`asc` or `desc`, default `desc`), `--page`, `--page-size` |
 | `tickets show` | `<ticket-number>` | — |
 | `tickets create` | — | `--email*` (customer email), `--subject*`, `--description*`, `--name` (customer name), `--status`, `--priority` (`low`/`medium`/`high`/`urgent`), `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--attach` (path to a file, repeat for more than one) |
 | `tickets update` | `<ticket-number>` | `--subject`, `--description`, `--status`, `--priority`, `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--attach` (path to a file, repeat for more than one) (all partial — only the flags set are sent) |
@@ -140,6 +140,17 @@ file to.` Retry it as `tickets comments create --attach` when you see that.
 `tickets list` returns newest first by default, matching the neeto-desk web
 UI. Pass `--sort updated_at` to order by last activity, or `--order asc` for
 oldest first.
+
+`--field-name` and `--field-value` filter on a custom ticket field and must be
+passed together; the command fails locally if only one is set, and the API
+returns 404 when no custom ticket field carries that name (matched
+case-insensitively). For a `multi_option` field, pass the options as one
+comma-separated value, as in `--field-value Chrome,Firefox`.
+
+`--range-type`, `--start-date` and `--end-date` filter on when the ticket was
+created, and behave as they do on the `reports` commands: a named range such as
+`last_7_days`, `this_month` or `all_time` on its own, or `custom` with both
+dates in `YYYY-MM-DD`.
 
 ### Ticket comments
 
@@ -323,6 +334,17 @@ neetodesk tickets drafts create 137 \
 ```bash
 neetodesk tickets list --status open,pending --page-size 50 --toon
 # repeat with --page 2, --page 3, ... until current_page_number == total_pages
+```
+
+### Find one customer's tickets from the last month
+```bash
+neetodesk tickets list \
+  --customer-email customer@acme.com --range-type last_30_days --toon
+```
+
+### Find tickets by a custom field value
+```bash
+neetodesk tickets list --field-name Browser --field-value Chrome --toon
 ```
 
 ### Reassign and re-prioritize a ticket
