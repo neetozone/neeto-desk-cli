@@ -92,7 +92,7 @@ var ticketsListCmd = &cobra.Command{
 			params.Set("field_name", fieldName)
 			params.Set("field_value", fieldValue)
 		}
-		mergeParams(params, dateRangeParams(cmd))
+		params = mergeParams(params, dateRangeParams(cmd))
 		if sort != "" {
 			params.Set("sort", sort)
 		}
