@@ -184,7 +184,7 @@ var ticketsShowCmd = &cobra.Command{
 			return err
 		}
 
-		data, err := c.Get(fmt.Sprintf("/tickets/%s", args[0]), nil)
+		data, err := c.Get(fmt.Sprintf("/tickets/%s", url.PathEscape(args[0])), nil)
 		if err != nil {
 			return err
 		}
@@ -333,7 +333,7 @@ var ticketsUpdateCmd = &cobra.Command{
 			body["attachments"] = attachments
 		}
 
-		data, err := c.Patch(fmt.Sprintf("/tickets/%s", args[0]), body)
+		data, err := c.Patch(fmt.Sprintf("/tickets/%s", url.PathEscape(args[0])), body)
 		if err != nil {
 			return err
 		}

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/neetozone/neeto-cli-commons/output"
 	"github.com/spf13/cobra"
@@ -32,7 +33,7 @@ var ticketCommentsListCmd = &cobra.Command{
 		}
 
 		params := paginationParams(cmd)
-		path := fmt.Sprintf("/tickets/%s/comments", args[0])
+		path := fmt.Sprintf("/tickets/%s/comments", url.PathEscape(args[0]))
 		data, err := c.Get(path, params)
 		if err != nil {
 			return err
@@ -55,7 +56,7 @@ var ticketCommentsShowCmd = &cobra.Command{
 			return err
 		}
 
-		path := fmt.Sprintf("/tickets/%s/comments/%s", args[0], args[1])
+		path := fmt.Sprintf("/tickets/%s/comments/%s", url.PathEscape(args[0]), url.PathEscape(args[1]))
 		data, err := c.Get(path, nil)
 		if err != nil {
 			return err
@@ -99,7 +100,7 @@ var ticketCommentsCreateCmd = &cobra.Command{
 			body["attachments"] = attachments
 		}
 
-		path := fmt.Sprintf("/tickets/%s/comments", args[0])
+		path := fmt.Sprintf("/tickets/%s/comments", url.PathEscape(args[0]))
 		data, err := c.Post(path, body)
 		if err != nil {
 			return err
