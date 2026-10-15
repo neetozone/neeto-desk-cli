@@ -77,15 +77,22 @@ var customersCreateCmd = &cobra.Command{
 		if v, _ := cmd.Flags().GetString("last-name"); v != "" {
 			customer["last_name"] = v
 		}
-		if v, _ := cmd.Flags().GetString("email"); v != "" {
-			customer["emails"] = []map[string]interface{}{
-				{"email": v, "primary": true},
+		if emails, _ := cmd.Flags().GetStringArray("email"); len(emails) > 0 {
+			entries := make([]map[string]interface{}, len(emails))
+			for i, email := range emails {
+				entries[i] = map[string]interface{}{"email": email, "primary": i == 0}
 			}
+			customer["emails"] = entries
 		}
-		if v, _ := cmd.Flags().GetString("phone"); v != "" {
-			customer["phones"] = []map[string]interface{}{
-				{"phone": v, "label": ""},
+		if phones, _ := cmd.Flags().GetStringArray("phone"); len(phones) > 0 {
+			entries := make([]map[string]interface{}, len(phones))
+			for i, phone := range phones {
+				entries[i] = map[string]interface{}{"phone": phone, "label": ""}
 			}
+			customer["phones"] = entries
+		}
+		if links, _ := cmd.Flags().GetStringArray("link"); len(links) > 0 {
+			customer["links"] = links
 		}
 		if v, _ := cmd.Flags().GetString("language"); v != "" {
 			customer["language"] = v
@@ -115,10 +122,11 @@ func init() {
 	addPaginationFlags(customersListCmd)
 	customersListCmd.Flags().String("email", "", "Filter by exact email")
 
-	customersCreateCmd.Flags().String("email", "", "Customer email")
+	customersCreateCmd.Flags().StringArray("email", []string{}, "Customer email, first is primary (repeat flag for multiple)")
 	customersCreateCmd.Flags().String("first-name", "", "Customer first name")
 	customersCreateCmd.Flags().String("last-name", "", "Customer last name")
-	customersCreateCmd.Flags().String("phone", "", "Customer phone number")
+	customersCreateCmd.Flags().StringArray("phone", []string{}, "Customer phone number (repeat flag for multiple)")
+	customersCreateCmd.Flags().StringArray("link", []string{}, "Customer link (repeat flag for multiple)")
 	customersCreateCmd.Flags().String("language", "", "Preferred language")
 	customersCreateCmd.Flags().String("time-zone", "", "Time zone (e.g. America/New_York)")
 	customersCreateCmd.Flags().String("description", "", "Customer description")

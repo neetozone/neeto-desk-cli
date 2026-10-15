@@ -26,3 +26,21 @@ func TestValidateCommentType(t *testing.T) {
 		})
 	}
 }
+
+func TestTicketCommentsCreateSendsAuthorEmail(t *testing.T) {
+	req := startTestAPI(t, `{"id":"1"}`)
+	setFlags(t, ticketCommentsCreateCmd, map[string][]string{
+		"content": {"<p>hi</p>"}, "author-email": {"riley@example.com"},
+	})
+
+	if err := ticketCommentsCreateCmd.RunE(ticketCommentsCreateCmd, []string{"1042"}); err != nil {
+		t.Fatalf("tickets comments create returned %v", err)
+	}
+
+	if req.path != "/tickets/1042/comments" {
+		t.Errorf("path = %q", req.path)
+	}
+	if req.body["author_email"] != "riley@example.com" {
+		t.Errorf("body = %v, want author_email", req.body)
+	}
+}

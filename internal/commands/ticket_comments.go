@@ -87,6 +87,10 @@ var ticketCommentsCreateCmd = &cobra.Command{
 			body["comment_type"] = v
 		}
 
+		if v, _ := cmd.Flags().GetString("author-email"); v != "" {
+			body["author_email"] = v
+		}
+
 		attachments, err := attachmentSignedIDs(cmd, c)
 		if err != nil {
 			return err
@@ -111,6 +115,7 @@ func init() {
 
 	ticketCommentsCreateCmd.Flags().String("content", "", "Comment content (HTML)")
 	ticketCommentsCreateCmd.Flags().String("comment-type", "reply", "Comment type: reply or note")
+	ticketCommentsCreateCmd.Flags().String("author-email", "", "Author email (used with an API key; a signed-in session always writes as you)")
 	addAttachFlag(ticketCommentsCreateCmd)
 	_ = ticketCommentsCreateCmd.MarkFlagRequired("content")
 

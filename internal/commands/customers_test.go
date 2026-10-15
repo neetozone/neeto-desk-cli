@@ -1,6 +1,9 @@
 package commands
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestCustomersListFlagsAreRegistered(t *testing.T) {
 	for _, name := range []string{"email", "page", "page-size"} {
@@ -33,5 +36,23 @@ func TestCustomersSubcommandsAreRegistered(t *testing.T) {
 		if !found {
 			t.Errorf("customers %s is not registered", name)
 		}
+	}
+}
+
+func TestCustomersCreateSendsRepeatedEmailsPhonesAndLinks(t *testing.T) {
+	req := startTestAPI(t, `{"id":"1"}`)
+	setFlags(t, customersCreateCmd, map[string][]string{
+		"email": {"a@acme.com", "b@acme.com"}, "phone": {"+1555", "+1666"}, "link": {"https://acme.com"},
+	})
+
+	if err := customersCreateCmd.RunE(customersCreateCmd, nil); err != nil {
+		t.Fatalf("customers create returned %v", err)
+	}
+
+	want := `{"customer":{"emails":[{"email":"a@acme.com","primary":true},{"email":"b@acme.com","primary":false}],` +
+		`"links":["https://acme.com"],"phones":[{"label":"","phone":"+1555"},{"label":"","phone":"+1666"}]}}`
+	got, _ := json.Marshal(req.body)
+	if string(got) != want {
+		t.Errorf("body = %s, want %s", got, want)
 	}
 }
