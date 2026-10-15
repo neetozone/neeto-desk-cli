@@ -356,7 +356,7 @@ func init() {
 	ticketsListCmd.Flags().Bool("unassigned", false, "Only tickets with no assigned agent")
 	ticketsListCmd.Flags().String("customer-domain", "", "Filter by customer email domain (e.g. acme.com)")
 	ticketsListCmd.Flags().StringArray("tag", []string{}, "Filter by tag, matches any (repeat flag for multiple)")
-	ticketsListCmd.Flags().String("query", "", "Text to find in the subject or description")
+	ticketsListCmd.Flags().String("query", "", "Text to find in the subject")
 	ticketsListCmd.Flags().String("external-id", "", "Filter by external ID")
 	addDateRangeFlags(ticketsListCmd)
 	ticketsListCmd.Flags().String("sort", defaultTicketSort, "Sort field: created_at or updated_at")

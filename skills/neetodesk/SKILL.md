@@ -119,7 +119,7 @@ description given at creation is stored as the ticket's first comment.
 
 | Command | Positional | Flags |
 |---|---|---|
-| `tickets list` | — | `--status` (comma-separated, e.g. `new,open`; `open` covers both `new` and `open`), `--priority` (comma-separated, e.g. `urgent,high`), `--unassigned`, `--customer-id`, `--customer-email`, `--customer-domain`, `--assignee-id`, `--assignee-email`, `--tag` (repeat; matches any), `--query` (text in subject or description), `--external-id`, `--field-name` + `--field-value` (custom ticket field), `--range-type`, `--start-date`, `--end-date`, `--sort` (`created_at` or `updated_at`, default `created_at`), `--order` (`asc` or `desc`, default `desc`), `--page`, `--page-size` |
+| `tickets list` | — | `--status` (comma-separated, e.g. `new,open`; `open` covers both `new` and `open`), `--priority` (comma-separated, e.g. `urgent,high`), `--unassigned`, `--customer-id`, `--customer-email`, `--customer-domain`, `--assignee-id`, `--assignee-email`, `--tag` (repeat; matches any), `--query` (text in the subject), `--external-id`, `--field-name` + `--field-value` (custom ticket field), `--range-type`, `--start-date`, `--end-date`, `--sort` (`created_at` or `updated_at`, default `created_at`), `--order` (`asc` or `desc`, default `desc`), `--page`, `--page-size` |
 | `tickets show` | `<ticket-number>` | — |
 | `tickets create` | — | `--email*` (customer email), `--subject*`, `--description*`, `--name` (customer name), `--status`, `--priority` (`low`/`medium`/`high`/`urgent`), `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--group` (group name), `--tag` (repeat), `--sub-category-one`, `--sub-category-two`, `--resolution-due-date` (ISO 8601), `--field Name=Value` (repeat), `--attach` (path to a file, repeat for more than one) |
 | `tickets update` | `<ticket-number>` | `--subject`, `--description`, `--status`, `--priority`, `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--group`, `--tag` (replaces every tag), `--add-tag`, `--remove-tag` (repeat), `--sub-category-one`, `--sub-category-two`, `--resolution-due-date`, `--field Name=Value` (repeat), `--attach` (path to a file, repeat for more than one) (all partial — only the flags set are sent) |
@@ -127,7 +127,7 @@ description given at creation is stored as the ticket's first comment.
 `tickets list` filters combine. `--unassigned` lists tickets with no agent and
 cannot be used with `--assignee-id` or `--assignee-email`. `--customer-domain
 acme.com` matches every customer at that domain. `--query` matches the subject
-and the description. `--tag` matches tickets that carry any of the given tags.
+only. `--tag` matches tickets that carry any of the given tags.
 A restricted agent's `tickets list` only returns the tickets that agent may see.
 
 **Use `--add-tag` to keep existing tags.** `tickets update --tag` replaces every
