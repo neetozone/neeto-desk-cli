@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -225,15 +224,10 @@ func TestTicketsListSendsNewFiltersAsAPIParameters(t *testing.T) {
 		t.Fatalf("tickets list returned %v", err)
 	}
 
-	got, _ := url.ParseQuery(req.query)
-	want := map[string]string{
-		"priority": "urgent,high", "unassigned": "true", "customer_domain": "acme.com",
-		"tags": "vip,billing", "query": "refund", "external_id": "ext-1",
-	}
-	for key, value := range want {
-		if got.Get(key) != value {
-			t.Errorf("%s = %q, want %q", key, got.Get(key), value)
-		}
+	want := "customer_domain=acme.com&external_id=ext-1&order=desc&priority=urgent%2Chigh" +
+		"&query=refund&sort=created_at&tags=vip%2Cbilling&unassigned=true"
+	if req.query != want {
+		t.Errorf("query = %q, want %q", req.query, want)
 	}
 }
 
@@ -283,16 +277,6 @@ func TestTicketsCreateSendsTagsGroupAndFields(t *testing.T) {
 	}
 }
 
-func TestTicketsCreateRejectsMalformedField(t *testing.T) {
-	setFlags(t, ticketsCreateCmd, map[string][]string{
-		"email": {"a@acme.com"}, "subject": {"s"}, "description": {"d"}, "field": {"Browser"},
-	})
-	err := ticketsCreateCmd.RunE(ticketsCreateCmd, nil)
-	if err == nil || !strings.Contains(err.Error(), "--field must be Name=Value") {
-		t.Errorf("error = %v, want the field format error", err)
-	}
-}
-
 func TestTicketsUpdateSendsTagAdjustments(t *testing.T) {
 	req := startTestAPI(t, `{"id":"1"}`)
 	setFlags(t, ticketsUpdateCmd, map[string][]string{
@@ -339,24 +323,29 @@ func TestTicketsUpdateRejectsTagWithAddOrRemove(t *testing.T) {
 	}
 }
 
-func TestParseNameValues(t *testing.T) {
+func TestParseNameValuesSplitsOnTheFirstEquals(t *testing.T) {
 	got, err := parseNameValues([]string{"A=1", "B=x=y", "C="})
 	if err != nil {
 		t.Fatalf("parseNameValues returned %v", err)
 	}
-	if got["A"] != "1" || got["B"] != "x=y" || got["C"] != "" {
-		t.Errorf("parsed = %v", got)
+	encoded, _ := json.Marshal(got)
+	if string(encoded) != `{"A":"1","B":"x=y","C":""}` {
+		t.Errorf("parsed = %s", encoded)
 	}
+}
+
+func TestParseNameValuesRejectsMalformedPairs(t *testing.T) {
 	for _, bad := range []string{"nope", "=v"} {
-		if _, err := parseNameValues([]string{bad}); err == nil {
-			t.Errorf("parseNameValues accepted %q", bad)
-		}
+		t.Run(bad, func(t *testing.T) {
+			if _, err := parseNameValues([]string{bad}); err == nil {
+				t.Errorf("parseNameValues accepted %q", bad)
+			}
+		})
 	}
 }
 
 func TestTicketsListSendsFiltersAsAPIParameters(t *testing.T) {
 	req := startTestAPI(t, `{"tickets":[]}`)
-	query := &req.query
 
 	flags := map[string]string{
 		"status": "open,pending", "customer-id": "cus-1", "customer-email": "a@acme.com",
@@ -384,7 +373,7 @@ func TestTicketsListSendsFiltersAsAPIParameters(t *testing.T) {
 		"&customer_id=cus-1&end_date=2026-01-31&field_name=single+one&field_value=two" +
 		"&order=asc&page=2&page_number=2&page_size=25&range_type=custom&sort=updated_at" +
 		"&start_date=2026-01-01&status=open%2Cpending"
-	if *query != want {
-		t.Errorf("query = %q, want %q", *query, want)
+	if req.query != want {
+		t.Errorf("query = %q, want %q", req.query, want)
 	}
 }

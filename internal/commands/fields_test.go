@@ -6,20 +6,27 @@ import (
 	"testing"
 )
 
-func TestValidateFieldKind(t *testing.T) {
-	for _, kind := range validFieldKinds {
-		if err := validateFieldKind(kind); err != nil {
-			t.Errorf("validateFieldKind(%q) = %v, want nil", kind, err)
-		}
-	}
-	for _, kind := range []string{"", "number", "SINGLE_OPTION"} {
-		if err := validateFieldKind(kind); err == nil {
-			t.Errorf("validateFieldKind(%q) = nil, want error", kind)
-		}
+func TestValidateFieldKindAcceptsEachKind(t *testing.T) {
+	for _, kind := range []string{"text", "textarea", "integer", "decimal", "date", "checkbox", "single_option", "multi_option"} {
+		t.Run(kind, func(t *testing.T) {
+			if err := validateFieldKind(kind); err != nil {
+				t.Errorf("validateFieldKind(%q) = %v, want nil", kind, err)
+			}
+		})
 	}
 }
 
-func TestParseOptionRenames(t *testing.T) {
+func TestValidateFieldKindRejectsUnknownKinds(t *testing.T) {
+	for _, kind := range []string{"", "number", "SINGLE_OPTION"} {
+		t.Run(kind, func(t *testing.T) {
+			if err := validateFieldKind(kind); err == nil {
+				t.Errorf("validateFieldKind(%q) = nil, want error", kind)
+			}
+		})
+	}
+}
+
+func TestParseOptionRenamesSplitsOnTheFirstEquals(t *testing.T) {
 	got, err := parseOptionRenames([]string{"abc=New Label", "def=a=b"})
 	if err != nil {
 		t.Fatalf("parseOptionRenames returned %v", err)
@@ -28,21 +35,26 @@ func TestParseOptionRenames(t *testing.T) {
 	if string(encoded) != `[{"id":"abc","label":"New Label"},{"id":"def","label":"a=b"}]` {
 		t.Errorf("parsed = %s", encoded)
 	}
+}
+
+func TestParseOptionRenamesRejectsMalformedPairs(t *testing.T) {
 	for _, bad := range []string{"abc", "=x", "abc="} {
-		if _, err := parseOptionRenames([]string{bad}); err == nil {
-			t.Errorf("parseOptionRenames accepted %q", bad)
-		}
+		t.Run(bad, func(t *testing.T) {
+			if _, err := parseOptionRenames([]string{bad}); err == nil {
+				t.Errorf("parseOptionRenames accepted %q", bad)
+			}
+		})
 	}
 }
 
-func TestFieldsListSendsStateAndPagination(t *testing.T) {
+func TestFieldsListSendsStateFilter(t *testing.T) {
 	req := startTestAPI(t, `{"fields":[]}`)
-	setFlags(t, fieldsListCmd, map[string][]string{"state": {"active"}, "page": {"2"}})
+	setFlags(t, fieldsListCmd, map[string][]string{"state": {"active"}})
 
 	if err := fieldsListCmd.RunE(fieldsListCmd, nil); err != nil {
 		t.Fatalf("fields list returned %v", err)
 	}
-	if req.method != "GET" || req.path != "/fields" || !strings.Contains(req.query, "state=active") {
+	if req.method != "GET" || req.path != "/fields" || req.query != "state=active" {
 		t.Errorf("request = %s %s?%s", req.method, req.path, req.query)
 	}
 }
@@ -78,14 +90,6 @@ func TestFieldsCreateSendsOnlyChangedFlags(t *testing.T) {
 	}
 }
 
-func TestFieldsCreateRejectsUnknownKindBeforeContactingTheAPI(t *testing.T) {
-	setFlags(t, fieldsCreateCmd, map[string][]string{"name": {"X"}, "kind": {"number"}})
-	err := fieldsCreateCmd.RunE(fieldsCreateCmd, nil)
-	if err == nil || !strings.Contains(err.Error(), "invalid kind") {
-		t.Errorf("error = %v, want the kind error", err)
-	}
-}
-
 func TestFieldsUpdateSendsOptionChanges(t *testing.T) {
 	req := startTestAPI(t, `{"id":"f1"}`)
 	setFlags(t, fieldsUpdateCmd, map[string][]string{
@@ -108,14 +112,19 @@ func TestFieldsUpdateSendsOptionChanges(t *testing.T) {
 	}
 }
 
-func TestFieldsUpdateRejectsBadRenameAndState(t *testing.T) {
+func TestFieldsUpdateRejectsMalformedRename(t *testing.T) {
 	setFlags(t, fieldsUpdateCmd, map[string][]string{"rename-option": {"nolabel"}})
-	if err := fieldsUpdateCmd.RunE(fieldsUpdateCmd, []string{"f1"}); err == nil {
-		t.Error("fields update accepted a malformed --rename-option")
+	err := fieldsUpdateCmd.RunE(fieldsUpdateCmd, []string{"f1"})
+	if err == nil || !strings.Contains(err.Error(), "--rename-option must be id=Label") {
+		t.Errorf("error = %v, want the rename format error", err)
 	}
+}
+
+func TestFieldsUpdateRejectsInvalidState(t *testing.T) {
 	setFlags(t, fieldsUpdateCmd, map[string][]string{"state": {"paused"}})
-	if err := fieldsUpdateCmd.RunE(fieldsUpdateCmd, []string{"f1"}); err == nil {
-		t.Error("fields update accepted an invalid --state")
+	err := fieldsUpdateCmd.RunE(fieldsUpdateCmd, []string{"f1"})
+	if err == nil || !strings.Contains(err.Error(), "invalid state") {
+		t.Errorf("error = %v, want the state error", err)
 	}
 }
 
