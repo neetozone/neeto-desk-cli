@@ -2,8 +2,8 @@
 name: neetodesk
 description: >
   Manage NeetoDesk helpdesk data from the command line: tickets, ticket comments and
-  drafts, customers, contact forms, team members (agents), and agent/group/ticket/CSAT
-  reports. Use when the user asks about support tickets, replying to or leaving an
+  drafts, custom ticket fields, customers, contact forms, team members (agents), and
+  agent/group/ticket/CSAT reports. Use when the user asks about support tickets, replying to or leaving an
   internal note on a ticket, creating a customer or inviting a team member, checking
   which contact forms are enabled, or pulling agent, group, survey, or ticket-volume
   reports for NeetoDesk.
@@ -86,7 +86,7 @@ tokens.
 ### Pagination
 
 List commands that paginate accept `--page` (1-indexed) and `--page-size`
-(max 100): `tickets list`, `tickets comments list`, `team-members list`,
+(max 100): `tickets list`, `tickets comments list`, `team-members list`, `fields list`,
 `reports agents`, and `reports groups`. The envelope's `pagination` field
 always exposes `current_page_number`, `total_pages`, `total_records`.
 Agents should loop by incrementing `--page` until
@@ -119,10 +119,27 @@ description given at creation is stored as the ticket's first comment.
 
 | Command | Positional | Flags |
 |---|---|---|
-| `tickets list` | — | `--status` (comma-separated, e.g. `open,pending`), `--customer-id`, `--customer-email`, `--assignee-id`, `--assignee-email`, `--field-name` + `--field-value` (custom ticket field), `--range-type`, `--start-date`, `--end-date`, `--sort` (`created_at` or `updated_at`, default `created_at`), `--order` (`asc` or `desc`, default `desc`), `--page`, `--page-size` |
+| `tickets list` | — | `--status` (comma-separated, e.g. `new,open`; `open` covers both `new` and `open`), `--priority` (comma-separated, e.g. `urgent,high`), `--unassigned`, `--customer-id`, `--customer-email`, `--customer-domain`, `--assignee-id`, `--assignee-email`, `--tag` (repeat; matches any), `--query` (text in the subject), `--external-id`, `--field-name` + `--field-value` (custom ticket field), `--range-type`, `--start-date`, `--end-date`, `--sort` (`created_at` or `updated_at`, default `created_at`), `--order` (`asc` or `desc`, default `desc`), `--page`, `--page-size` |
 | `tickets show` | `<ticket-number>` | — |
-| `tickets create` | — | `--email*` (customer email), `--subject*`, `--description*`, `--name` (customer name), `--status`, `--priority` (`low`/`medium`/`high`/`urgent`), `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--attach` (path to a file, repeat for more than one) |
-| `tickets update` | `<ticket-number>` | `--subject`, `--description`, `--status`, `--priority`, `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--attach` (path to a file, repeat for more than one) (all partial — only the flags set are sent) |
+| `tickets create` | — | `--email*` (customer email), `--subject*`, `--description*`, `--name` (customer name), `--status`, `--priority` (`low`/`medium`/`high`/`urgent`), `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--group` (group name), `--tag` (repeat), `--sub-category-one`, `--sub-category-two`, `--resolution-due-date` (ISO 8601), `--field Name=Value` (repeat), `--attach` (path to a file, repeat for more than one) |
+| `tickets update` | `<ticket-number>` | `--subject`, `--description`, `--status`, `--priority`, `--category`, `--agent-id`, `--group-id`, `--assignee-email`, `--group`, `--tag` (replaces every tag), `--add-tag`, `--remove-tag` (repeat), `--sub-category-one`, `--sub-category-two`, `--resolution-due-date`, `--field Name=Value` (repeat), `--attach` (path to a file, repeat for more than one) (all partial — only the flags set are sent) |
+
+`tickets list` filters combine. `--unassigned` lists tickets with no agent and
+cannot be used with `--assignee-id` or `--assignee-email`. `--customer-domain
+acme.com` matches every customer at that domain. `--query` matches the subject
+only. `--tag` matches tickets that carry any of the given tags.
+A restricted agent's `tickets list` only returns the tickets that agent may see.
+
+**Use `--add-tag` to keep existing tags.** `tickets update --tag` replaces every
+tag on the ticket, while `--add-tag` and `--remove-tag` change only the tags
+named. `--tag` cannot be combined with `--add-tag` or `--remove-tag`.
+
+`tickets update` honours `--assignee-email` and `--group`; older API versions
+dropped them silently. `--field Name=Value` sets a custom ticket field; the
+value splits on the first `=`, and a `multi_option` field takes a
+comma-separated value such as `--field Browser=Chrome,Firefox`. Valid statuses
+are `new`, `open`, `waiting_on_customer`, `on_hold`, `closed`, `spam` and
+`trash`; there is no `resolved` status, use `closed`.
 
 An agent can be assigned either by `--agent-id` (the team member's id) or
 by `--assignee-email`; same for a group via `--group-id`.
@@ -148,8 +165,9 @@ case-insensitively). For a `multi_option` field, pass the options as one
 comma-separated value, as in `--field-value Chrome,Firefox`.
 
 `--range-type`, `--start-date` and `--end-date` filter on when the ticket was
-created, and behave as they do on the `reports` commands: a named range such as
-`last_7_days`, `this_month` or `all_time` on its own, or `custom` with both
+created, and behave as they do on the `reports` commands: a named range (`last_7_days`,
+`last_30_days`, `last_24_hours`, `this_week`, `last_week`, `this_month`, `last_month`,
+`this_quarter`, `last_quarter`, `this_year`, `last_year` or `all_time`) on its own, or `custom` with both
 dates in `YYYY-MM-DD`.
 
 ### Ticket comments
@@ -161,7 +179,7 @@ visible to the customer; a `note` is internal to the workspace only.
 |---|---|---|
 | `tickets comments list` | `<ticket-number>` | `--page`, `--page-size` |
 | `tickets comments show` | `<ticket-number> <comment-id>` | — |
-| `tickets comments create` | `<ticket-number>` | `--content*` (HTML), `--comment-type` (`reply` or `note`, default `reply`), `--attach` (path to a file, repeat for more than one) |
+| `tickets comments create` | `<ticket-number>` | `--content*` (HTML), `--comment-type` (`reply` or `note`, default `reply`), `--author-email` (used with an API key; a signed-in session always writes as you), `--attach` (path to a file, repeat for more than one) |
 
 ### Attachments
 
@@ -211,7 +229,23 @@ a customer id.
 |---|---|---|
 | `customers list` | — | `--email` (filter by exact email), `--page`, `--page-size` |
 | `customers show` | `<id>` | — |
-| `customers create` | — | `--email*`, `--first-name`, `--last-name`, `--phone`, `--language` (preferred language), `--time-zone` (e.g. `America/New_York`), `--description`, `--company-id` |
+| `customers create` | — | `--email*` (repeat for more than one; the first is primary), `--first-name`, `--last-name`, `--phone` (repeat), `--link` (repeat), `--language` (preferred language), `--time-zone` (e.g. `America/New_York`), `--description`, `--company-id` |
+
+### Ticket fields
+
+Custom ticket fields are extra data a workspace collects on each ticket.
+Set their values on a ticket with `tickets create --field` or `tickets update --field`.
+
+| Command | Positional | Flags |
+|---|---|---|
+| `fields list` | — | `--state` (`active` or `inactive`), `--page`, `--page-size` |
+| `fields show` | `<id>` | — |
+| `fields create` | — | `--name*`, `--kind*` (`text`, `textarea`, `integer`, `decimal`, `date`, `checkbox`, `single_option`, `multi_option`), `--option` (option label, repeat), `--state`, `--required`, `--required-when-submitting-form`, `--required-when-closing`, `--display-order`, `--placeholder-slug` |
+| `fields update` | `<id>` | `--name`, `--state`, `--required`, `--required-when-submitting-form`, `--required-when-closing`, `--display-order`, `--placeholder-slug`, `--add-option` (label, repeat), `--rename-option` (`id=Label`, repeat), `--remove-option` (option id, repeat) (all partial) |
+| `fields delete` | `<id>` | — |
+
+The boolean flags are sent only when you pass them, so omitting one leaves the
+current value alone.
 
 ### Team members
 
@@ -241,10 +275,13 @@ customers use to raise a ticket. Disabled forms are omitted.
 ### Reports
 
 Reports aggregate ticket, agent, group, and survey metrics over a date
-range. `--range-type` accepts values like `last_7_days` or `last_30_days`;
+range. `--range-type` accepts `last_7_days`, `last_30_days`, `last_24_hours`,
+`this_week`, `last_week`, `this_month`, `last_month`, `this_quarter`,
+`last_quarter`, `this_year`, `last_year`, `all_time` or `custom`;
 pass `custom` together with `--start-date` and `--end-date` (`YYYY-MM-DD`)
 for an exact window. Omitting all three flags uses NeetoDesk's own default
-range.
+range. Each metric row carries `present`, `previous` and `change_percentage`.
+A restricted agent's reports cover only the tickets that agent may see.
 
 | Command | Positional | Flags | What it returns |
 |---|---|---|---|
@@ -332,7 +369,7 @@ neetodesk tickets drafts create 137 \
 
 ### Triage open tickets and page through the list
 ```bash
-neetodesk tickets list --status open,pending --page-size 50 --toon
+neetodesk tickets list --status open --unassigned --page-size 50 --toon
 # repeat with --page 2, --page 3, ... until current_page_number == total_pages
 ```
 
@@ -340,6 +377,21 @@ neetodesk tickets list --status open,pending --page-size 50 --toon
 ```bash
 neetodesk tickets list \
   --customer-email customer@acme.com --range-type last_30_days --toon
+```
+
+### Close tickets after a fix ships
+```bash
+neetodesk tickets update 1042 --status closed
+```
+
+### Tag without losing existing tags
+```bash
+neetodesk tickets update 1042 --add-tag billing
+```
+
+### Find a customer's company tickets
+```bash
+neetodesk tickets list --customer-domain acme.com --status open --toon
 ```
 
 ### Find tickets by a custom field value

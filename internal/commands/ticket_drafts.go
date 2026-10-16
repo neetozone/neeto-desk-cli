@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/spf13/cobra"
 )
@@ -43,7 +44,7 @@ var ticketDraftsCreateCmd = &cobra.Command{
 			body["attachments"] = attachments
 		}
 
-		path := fmt.Sprintf("/tickets/%s/drafts", args[0])
+		path := fmt.Sprintf("/tickets/%s/drafts", url.PathEscape(args[0]))
 		data, err := c.Post(path, body)
 		if err != nil {
 			return err

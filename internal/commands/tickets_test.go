@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"github.com/neetozone/neeto-cli-commons/cli"
 	"github.com/neetozone/neeto-cli-commons/config"
 	product "github.com/neetozone/neeto-desk-cli"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func TestValidateTicketSort(t *testing.T) {
@@ -148,13 +151,25 @@ func TestTicketsListRejectsBadSortBeforeContactingTheAPI(t *testing.T) {
 	}
 }
 
-func TestTicketsListSendsFiltersAsAPIParameters(t *testing.T) {
-	var query string
+type capturedRequest struct {
+	method string
+	path   string
+	query  string
+	body   map[string]interface{}
+}
+
+func startTestAPI(t *testing.T, response string) *capturedRequest {
+	t.Helper()
+	captured := &capturedRequest{}
 	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query = r.URL.RawQuery
-		_, _ = w.Write([]byte(`{"tickets":[]}`))
+		captured.method = r.Method
+		captured.path = strings.TrimPrefix(r.URL.Path, "/api/external/v2")
+		captured.query = r.URL.RawQuery
+		captured.body = nil
+		_ = json.NewDecoder(r.Body).Decode(&captured.body)
+		_, _ = w.Write([]byte(response))
 	}))
-	defer api.Close()
+	t.Cleanup(api.Close)
 
 	home := t.TempDir()
 	dir := filepath.Join(home, ".config", "neetodesk")
@@ -173,6 +188,164 @@ func TestTicketsListSendsFiltersAsAPIParameters(t *testing.T) {
 		t.Fatalf("could not parse the product config: %v", err)
 	}
 	Register(cli.New(*cfg))
+	return captured
+}
+
+func setFlags(t *testing.T, cmd *cobra.Command, flags map[string][]string) {
+	t.Helper()
+	t.Cleanup(func() {
+		for name := range flags {
+			flag := cmd.Flags().Lookup(name)
+			if slice, ok := flag.Value.(pflag.SliceValue); ok {
+				_ = slice.Replace([]string{})
+			} else {
+				_ = flag.Value.Set(flag.DefValue)
+			}
+			flag.Changed = false
+		}
+	})
+	for name, values := range flags {
+		for _, value := range values {
+			if err := cmd.Flags().Set(name, value); err != nil {
+				t.Fatalf("could not set --%s: %v", name, err)
+			}
+		}
+	}
+}
+
+func TestTicketsListSendsNewFiltersAsAPIParameters(t *testing.T) {
+	req := startTestAPI(t, `{"tickets":[]}`)
+	setFlags(t, ticketsListCmd, map[string][]string{
+		"priority": {"urgent,high"}, "unassigned": {"true"}, "customer-domain": {"acme.com"},
+		"tag": {"vip", "billing"}, "query": {"refund"}, "external-id": {"ext-1"},
+	})
+
+	if err := ticketsListCmd.RunE(ticketsListCmd, nil); err != nil {
+		t.Fatalf("tickets list returned %v", err)
+	}
+
+	want := "customer_domain=acme.com&external_id=ext-1&order=desc&priority=urgent%2Chigh" +
+		"&query=refund&sort=created_at&tags=vip%2Cbilling&unassigned=true"
+	if req.query != want {
+		t.Errorf("query = %q, want %q", req.query, want)
+	}
+}
+
+func TestTicketsListOmitsUnassignedWhenNotSet(t *testing.T) {
+	req := startTestAPI(t, `{"tickets":[]}`)
+	if err := ticketsListCmd.RunE(ticketsListCmd, nil); err != nil {
+		t.Fatalf("tickets list returned %v", err)
+	}
+	if strings.Contains(req.query, "unassigned") {
+		t.Errorf("query = %q, want no unassigned parameter", req.query)
+	}
+}
+
+func TestTicketsListRejectsUnassignedWithAssignee(t *testing.T) {
+	for _, flag := range []string{"assignee-id", "assignee-email"} {
+		t.Run(flag, func(t *testing.T) {
+			setFlags(t, ticketsListCmd, map[string][]string{"unassigned": {"true"}, flag: {"x"}})
+			err := ticketsListCmd.RunE(ticketsListCmd, nil)
+			if err == nil || !strings.Contains(err.Error(), "--unassigned cannot be combined") {
+				t.Errorf("error = %v, want the unassigned conflict", err)
+			}
+		})
+	}
+}
+
+func TestTicketsCreateSendsTagsGroupAndFields(t *testing.T) {
+	req := startTestAPI(t, `{"id":"1"}`)
+	setFlags(t, ticketsCreateCmd, map[string][]string{
+		"email": {"a@acme.com"}, "subject": {"s"}, "description": {"d"}, "group": {"Engineering"},
+		"tag": {"bug", "vip"}, "sub-category-one": {"one"}, "sub-category-two": {"two"},
+		"resolution-due-date": {"2026-12-01T10:00:00Z"}, "field": {"Browser=Chrome,Firefox", "Note=a=b"},
+	})
+
+	if err := ticketsCreateCmd.RunE(ticketsCreateCmd, nil); err != nil {
+		t.Fatalf("tickets create returned %v", err)
+	}
+
+	if req.method != "POST" || req.path != "/tickets" {
+		t.Errorf("request = %s %s, want POST /tickets", req.method, req.path)
+	}
+	wantBody := `{"description":"d","email":"a@acme.com","group":"Engineering","resolution_due_date":"2026-12-01T10:00:00Z",` +
+		`"sub_category_one":"one","sub_category_two":"two","subject":"s","tags":["bug","vip"],` +
+		`"ticket_fields":{"Browser":"Chrome,Firefox","Note":"a=b"}}`
+	gotBody, _ := json.Marshal(req.body)
+	if string(gotBody) != wantBody {
+		t.Errorf("body = %s, want %s", gotBody, wantBody)
+	}
+}
+
+func TestTicketsUpdateSendsTagAdjustments(t *testing.T) {
+	req := startTestAPI(t, `{"id":"1"}`)
+	setFlags(t, ticketsUpdateCmd, map[string][]string{
+		"add-tag": {"billing"}, "remove-tag": {"old", "stale"}, "group": {"Billing"},
+		"assignee-email": {"riley@example.com"}, "field": {"Browser=Chrome"},
+	})
+
+	if err := ticketsUpdateCmd.RunE(ticketsUpdateCmd, []string{"1042"}); err != nil {
+		t.Fatalf("tickets update returned %v", err)
+	}
+
+	if req.method != "PATCH" || req.path != "/tickets/1042" {
+		t.Errorf("request = %s %s, want PATCH /tickets/1042", req.method, req.path)
+	}
+	wantBody := `{"add_tags":["billing"],"assignee_email":"riley@example.com","group":"Billing",` +
+		`"remove_tags":["old","stale"],"ticket_fields":{"Browser":"Chrome"}}`
+	gotBody, _ := json.Marshal(req.body)
+	if string(gotBody) != wantBody {
+		t.Errorf("body = %s, want %s", gotBody, wantBody)
+	}
+}
+
+func TestTicketsUpdateReplacesTagsWithTagFlag(t *testing.T) {
+	req := startTestAPI(t, `{"id":"1"}`)
+	setFlags(t, ticketsUpdateCmd, map[string][]string{"tag": {"a", "b"}})
+	if err := ticketsUpdateCmd.RunE(ticketsUpdateCmd, []string{"1042"}); err != nil {
+		t.Fatalf("tickets update returned %v", err)
+	}
+	gotBody, _ := json.Marshal(req.body)
+	if string(gotBody) != `{"tags":["a","b"]}` {
+		t.Errorf("body = %s, want only tags", gotBody)
+	}
+}
+
+func TestTicketsUpdateRejectsTagWithAddOrRemove(t *testing.T) {
+	for _, flag := range []string{"add-tag", "remove-tag"} {
+		t.Run(flag, func(t *testing.T) {
+			setFlags(t, ticketsUpdateCmd, map[string][]string{"tag": {"a"}, flag: {"b"}})
+			err := ticketsUpdateCmd.RunE(ticketsUpdateCmd, []string{"1042"})
+			if err == nil || !strings.Contains(err.Error(), "--tag cannot be combined") {
+				t.Errorf("error = %v, want the tag conflict", err)
+			}
+		})
+	}
+}
+
+func TestParseNameValuesSplitsOnTheFirstEquals(t *testing.T) {
+	got, err := parseNameValues([]string{"A=1", "B=x=y", "C="})
+	if err != nil {
+		t.Fatalf("parseNameValues returned %v", err)
+	}
+	encoded, _ := json.Marshal(got)
+	if string(encoded) != `{"A":"1","B":"x=y","C":""}` {
+		t.Errorf("parsed = %s", encoded)
+	}
+}
+
+func TestParseNameValuesRejectsMalformedPairs(t *testing.T) {
+	for _, bad := range []string{"nope", "=v"} {
+		t.Run(bad, func(t *testing.T) {
+			if _, err := parseNameValues([]string{bad}); err == nil {
+				t.Errorf("parseNameValues accepted %q", bad)
+			}
+		})
+	}
+}
+
+func TestTicketsListSendsFiltersAsAPIParameters(t *testing.T) {
+	req := startTestAPI(t, `{"tickets":[]}`)
 
 	flags := map[string]string{
 		"status": "open,pending", "customer-id": "cus-1", "customer-email": "a@acme.com",
@@ -200,7 +373,7 @@ func TestTicketsListSendsFiltersAsAPIParameters(t *testing.T) {
 		"&customer_id=cus-1&end_date=2026-01-31&field_name=single+one&field_value=two" +
 		"&order=asc&page=2&page_number=2&page_size=25&range_type=custom&sort=updated_at" +
 		"&start_date=2026-01-01&status=open%2Cpending"
-	if query != want {
-		t.Errorf("query = %q, want %q", query, want)
+	if req.query != want {
+		t.Errorf("query = %q, want %q", req.query, want)
 	}
 }
