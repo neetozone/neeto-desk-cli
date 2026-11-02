@@ -9,7 +9,7 @@ machine_type: multi
 commands:
   - checkout
   - neetoci-version go 1.26
-  - 'curl -fsSL -H "Authorization: token ${GITHUB_TOKEN}" https://raw.githubusercontent.com/neetozone/neeto-cli-commons/v1.2.0/assets/release.sh -o /tmp/neeto-cli-release.sh'
+  - 'curl -fsSL -H "Authorization: token ${GITHUB_TOKEN}" https://raw.githubusercontent.com/neetozone/neeto-cli-commons/v1.2.1/assets/release.sh -o /tmp/neeto-cli-release.sh'
   - echo "05e34e04ddf641a207566fc12fa8021e1eb9f771b3083bd01c638d2fae2b3b84  /tmp/neeto-cli-release.sh" | sha256sum -c -
   - bash /tmp/neeto-cli-release.sh
 
