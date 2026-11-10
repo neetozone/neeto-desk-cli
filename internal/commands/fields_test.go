@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"strings"
 	"testing"
 )
@@ -31,7 +31,7 @@ func TestParseOptionRenamesSplitsOnTheFirstEquals(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseOptionRenames returned %v", err)
 	}
-	encoded, _ := json.Marshal(got)
+	encoded, _ := json.Marshal(got, json.Deterministic(true))
 	if string(encoded) != `[{"id":"abc","label":"New Label"},{"id":"def","label":"a=b"}]` {
 		t.Errorf("parsed = %s", encoded)
 	}
@@ -84,7 +84,7 @@ func TestFieldsCreateSendsOnlyChangedFlags(t *testing.T) {
 		t.Errorf("request = %s %s", req.method, req.path)
 	}
 	want := `{"field":{"data":["Chrome","Firefox"],"display_order":3,"is_required":false,"kind":"single_option","name":"Browser"}}`
-	got, _ := json.Marshal(req.body)
+	got, _ := json.Marshal(req.body, json.Deterministic(true))
 	if string(got) != want {
 		t.Errorf("body = %s, want %s", got, want)
 	}
@@ -106,7 +106,7 @@ func TestFieldsUpdateSendsOptionChanges(t *testing.T) {
 	}
 	want := `{"field":{"data":[{"id":"o1","label":"Edge"},{"label":"Safari"}],` +
 		`"is_required_for_agent_when_closing_ticket":true,"remove_option_ids":["o2"],"state":"inactive"}}`
-	got, _ := json.Marshal(req.body)
+	got, _ := json.Marshal(req.body, json.Deterministic(true))
 	if string(got) != want {
 		t.Errorf("body = %s, want %s", got, want)
 	}

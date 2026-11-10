@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"testing"
 )
 
@@ -51,7 +51,7 @@ func TestCustomersCreateSendsRepeatedEmailsPhonesAndLinks(t *testing.T) {
 
 	want := `{"customer":{"emails":[{"email":"a@acme.com","primary":true},{"email":"b@acme.com","primary":false}],` +
 		`"links":["https://acme.com"],"phones":[{"label":"","phone":"+1555"},{"label":"","phone":"+1666"}]}}`
-	got, _ := json.Marshal(req.body)
+	got, _ := json.Marshal(req.body, json.Deterministic(true))
 	if string(got) != want {
 		t.Errorf("body = %s, want %s", got, want)
 	}

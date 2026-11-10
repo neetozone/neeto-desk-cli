@@ -3,7 +3,8 @@ package commands
 import (
 	"crypto/md5"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"fmt"
 	"io"
 	"mime"
@@ -14,7 +15,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/neetozone/neeto-cli-commons/client"
+	"github.com/neetozone/neeto-cli-commons/v2/client"
 	"github.com/spf13/cobra"
 )
 
@@ -82,7 +83,7 @@ func attachmentSignedIDs(cmd *cobra.Command, c *client.Client) ([]string, error)
 	return signedIDs, nil
 }
 
-func uploadFile(c *client.Client, path string) (attachmentUpload, json.RawMessage, error) {
+func uploadFile(c *client.Client, path string) (attachmentUpload, jsontext.Value, error) {
 	var upload attachmentUpload
 
 	info, err := os.Stat(path)

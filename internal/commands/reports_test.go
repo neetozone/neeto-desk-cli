@@ -1,13 +1,14 @@
 package commands
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"reflect"
 	"testing"
 )
 
 func TestTicketStatusReport(t *testing.T) {
-	data := json.RawMessage(`{"ticket_statuses":[
+	data := jsontext.Value(`{"ticket_statuses":[
 		{"name":"closed","value":{"present":8,"previous":null,"change_percentage":null}},
 		{"name":"open","value":{"present":3,"previous":2,"change_percentage":50}}
 	]}`)
@@ -40,14 +41,14 @@ func TestTicketStatusReport(t *testing.T) {
 }
 
 func TestTicketStatusReport_MissingKey(t *testing.T) {
-	data := json.RawMessage(`{"something_else":[]}`)
+	data := jsontext.Value(`{"something_else":[]}`)
 	if _, _, _, ok := ticketStatusReport(data); ok {
 		t.Error("ticketStatusReport() ok = true, want false when ticket_statuses absent")
 	}
 }
 
 func TestTicketStatusReport_MissingValueObject(t *testing.T) {
-	data := json.RawMessage(`{"ticket_statuses":[{"name":"closed"}]}`)
+	data := jsontext.Value(`{"ticket_statuses":[{"name":"closed"}]}`)
 
 	_, headers, rows, ok := ticketStatusReport(data)
 	if !ok {
@@ -63,13 +64,13 @@ func TestTicketStatusReport_MissingValueObject(t *testing.T) {
 }
 
 func TestTicketStatusReport_Empty(t *testing.T) {
-	if _, _, _, ok := ticketStatusReport(json.RawMessage(`{"ticket_statuses":[]}`)); ok {
+	if _, _, _, ok := ticketStatusReport(jsontext.Value(`{"ticket_statuses":[]}`)); ok {
 		t.Error("ticketStatusReport() ok = true, want false for empty list (fall back to 'No records found')")
 	}
 }
 
 func TestTicketTimeSeriesReport(t *testing.T) {
-	data := json.RawMessage(`{
+	data := jsontext.Value(`{
 		"dates":["2026-06-19","2026-06-20"],
 		"data":[
 			{"name":"new","values":[0,7]},
@@ -97,7 +98,7 @@ func TestTicketTimeSeriesReport(t *testing.T) {
 }
 
 func TestTicketTimeSeriesReport_ShortSeries(t *testing.T) {
-	data := json.RawMessage(`{"dates":["d1","d2","d3"],"data":[{"name":"new","values":[1,2]}]}`)
+	data := jsontext.Value(`{"dates":["d1","d2","d3"],"data":[{"name":"new","values":[1,2]}]}`)
 
 	headers, rows, ok := ticketTimeSeriesReport(data)
 	if !ok {
@@ -117,7 +118,7 @@ func TestTicketTimeSeriesReport_ShortSeries(t *testing.T) {
 }
 
 func TestTicketTimeSeriesReport_LongSeries(t *testing.T) {
-	data := json.RawMessage(`{"dates":["d1","d2"],"data":[{"name":"new","values":[1,2,3,4]}]}`)
+	data := jsontext.Value(`{"dates":["d1","d2"],"data":[{"name":"new","values":[1,2,3,4]}]}`)
 
 	headers, rows, ok := ticketTimeSeriesReport(data)
 	if !ok {
@@ -136,13 +137,13 @@ func TestTicketTimeSeriesReport_LongSeries(t *testing.T) {
 }
 
 func TestTicketTimeSeriesReport_MissingKeys(t *testing.T) {
-	if _, _, ok := ticketTimeSeriesReport(json.RawMessage(`{"foo":1}`)); ok {
+	if _, _, ok := ticketTimeSeriesReport(jsontext.Value(`{"foo":1}`)); ok {
 		t.Error("ticketTimeSeriesReport() ok = true, want false when dates/data absent")
 	}
 }
 
 func TestTicketTimeSeriesReport_EmptyDates(t *testing.T) {
-	data := json.RawMessage(`{"dates":[],"data":[{"name":"new","values":[]}]}`)
+	data := jsontext.Value(`{"dates":[],"data":[{"name":"new","values":[]}]}`)
 	if _, _, ok := ticketTimeSeriesReport(data); ok {
 		t.Error("ticketTimeSeriesReport() ok = true, want false for empty dates")
 	}

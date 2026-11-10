@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/neetozone/neeto-cli-commons/cli"
-	"github.com/neetozone/neeto-cli-commons/config"
+	"github.com/neetozone/neeto-cli-commons/v2/cli"
+	"github.com/neetozone/neeto-cli-commons/v2/config"
 	product "github.com/neetozone/neeto-desk-cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -166,7 +166,7 @@ func startTestAPI(t *testing.T, response string) *capturedRequest {
 		captured.path = strings.TrimPrefix(r.URL.Path, "/api/external/v2")
 		captured.query = r.URL.RawQuery
 		captured.body = nil
-		_ = json.NewDecoder(r.Body).Decode(&captured.body)
+		_ = json.UnmarshalRead(r.Body, &captured.body)
 		_, _ = w.Write([]byte(response))
 	}))
 	t.Cleanup(api.Close)
@@ -271,7 +271,7 @@ func TestTicketsCreateSendsTagsGroupAndFields(t *testing.T) {
 	wantBody := `{"description":"d","email":"a@acme.com","group":"Engineering","resolution_due_date":"2026-12-01T10:00:00Z",` +
 		`"sub_category_one":"one","sub_category_two":"two","subject":"s","tags":["bug","vip"],` +
 		`"ticket_fields":{"Browser":"Chrome,Firefox","Note":"a=b"}}`
-	gotBody, _ := json.Marshal(req.body)
+	gotBody, _ := json.Marshal(req.body, json.Deterministic(true))
 	if string(gotBody) != wantBody {
 		t.Errorf("body = %s, want %s", gotBody, wantBody)
 	}
@@ -293,7 +293,7 @@ func TestTicketsUpdateSendsTagAdjustments(t *testing.T) {
 	}
 	wantBody := `{"add_tags":["billing"],"assignee_email":"riley@example.com","group":"Billing",` +
 		`"remove_tags":["old","stale"],"ticket_fields":{"Browser":"Chrome"}}`
-	gotBody, _ := json.Marshal(req.body)
+	gotBody, _ := json.Marshal(req.body, json.Deterministic(true))
 	if string(gotBody) != wantBody {
 		t.Errorf("body = %s, want %s", gotBody, wantBody)
 	}
@@ -305,7 +305,7 @@ func TestTicketsUpdateReplacesTagsWithTagFlag(t *testing.T) {
 	if err := ticketsUpdateCmd.RunE(ticketsUpdateCmd, []string{"1042"}); err != nil {
 		t.Fatalf("tickets update returned %v", err)
 	}
-	gotBody, _ := json.Marshal(req.body)
+	gotBody, _ := json.Marshal(req.body, json.Deterministic(true))
 	if string(gotBody) != `{"tags":["a","b"]}` {
 		t.Errorf("body = %s, want only tags", gotBody)
 	}
@@ -328,7 +328,7 @@ func TestParseNameValuesSplitsOnTheFirstEquals(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseNameValues returned %v", err)
 	}
-	encoded, _ := json.Marshal(got)
+	encoded, _ := json.Marshal(got, json.Deterministic(true))
 	if string(encoded) != `{"A":"1","B":"x=y","C":""}` {
 		t.Errorf("parsed = %s", encoded)
 	}
