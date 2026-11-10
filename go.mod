@@ -3,7 +3,7 @@ module github.com/neetozone/neeto-desk-cli
 go 1.27.3
 
 require (
-	github.com/neetozone/neeto-cli-commons/v2 v2.0.0-20261110152334-a618d2a705b8
+	github.com/neetozone/neeto-cli-commons/v2 v2.0.0-20261110153556-6c0feab158c2
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 )
