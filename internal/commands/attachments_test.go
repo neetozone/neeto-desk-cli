@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/neetozone/neeto-cli-commons/client"
+	"github.com/neetozone/neeto-cli-commons/v2/client"
 )
 
 func TestFileChecksumIsTheBase64MD5Digest(t *testing.T) {
@@ -74,7 +74,7 @@ func TestUploadFileReservesTheUploadThenSendsTheBytes(t *testing.T) {
 		if r.URL.Path != "/attachment_uploads" {
 			t.Errorf("reserved at %q, want /attachment_uploads", r.URL.Path)
 		}
-		_ = json.NewDecoder(r.Body).Decode(&reserved)
+		_ = json.UnmarshalRead(r.Body, &reserved)
 		_, _ = fmt.Fprintf(w, `{"signed_id":"signed-abc","upload_url":%q,
 			"upload_headers":{"Content-Type":"application/pdf"}}`, storage.URL+"/put")
 	}))

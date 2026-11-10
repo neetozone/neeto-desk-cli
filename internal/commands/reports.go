@@ -1,10 +1,11 @@
 package commands
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"net/url"
 
-	"github.com/neetozone/neeto-cli-commons/output"
+	"github.com/neetozone/neeto-cli-commons/v2/output"
 	"github.com/spf13/cobra"
 )
 
@@ -116,8 +117,8 @@ var reportsTicketTimeSeriesCmd = &cobra.Command{
 	},
 }
 
-func ticketStatusReport(data json.RawMessage) (json.RawMessage, []string, [][]interface{}, bool) {
-	var parsed map[string]json.RawMessage
+func ticketStatusReport(data jsontext.Value) (jsontext.Value, []string, [][]interface{}, bool) {
+	var parsed map[string]jsontext.Value
 	if err := json.Unmarshal(data, &parsed); err != nil {
 		return nil, nil, nil, false
 	}
@@ -147,7 +148,7 @@ func ticketStatusReport(data json.RawMessage) (json.RawMessage, []string, [][]in
 	return items, headers, rows, true
 }
 
-func ticketTimeSeriesReport(data json.RawMessage) ([]string, [][]interface{}, bool) {
+func ticketTimeSeriesReport(data jsontext.Value) ([]string, [][]interface{}, bool) {
 	var parsed struct {
 		Dates []interface{}            `json:"dates"`
 		Data  []map[string]interface{} `json:"data"`
