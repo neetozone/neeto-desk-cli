@@ -10,7 +10,7 @@ commands:
   - checkout
   - neetoci-version go 1.26
   - export GOTOOLCHAIN=go1.27.3
-  - 'curl -fsSL -H "Authorization: token ${GITHUB_TOKEN}" https://raw.githubusercontent.com/neetozone/neeto-cli-commons/6c0feab158c2b5cfa8182ff1855adca70d98b3d5/assets/release.sh -o /tmp/neeto-cli-release.sh'
+  - 'curl -fsSL -H "Authorization: token ${GITHUB_TOKEN}" https://raw.githubusercontent.com/neetozone/neeto-cli-commons/v2.0.0/assets/release.sh -o /tmp/neeto-cli-release.sh'
   - echo "ad70f319d5390d21a15255f9e460760e8af467d1c268bb904bd0fcaf452953e3  /tmp/neeto-cli-release.sh" | sha256sum -c -
   - bash /tmp/neeto-cli-release.sh
 
